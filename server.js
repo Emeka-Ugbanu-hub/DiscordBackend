@@ -14,8 +14,8 @@ app.use(cors({
     'http://127.0.0.1', 
     'http://localhost:5173', 
     'https://1414187165146943518.discordsays.com',  // Discord Activity domain
-    'https://gonna-captured-cheers-models.trycloudflare.com',  // Frontend tunnel
-    'https://impressed-henry-probability-buf.trycloudflare.com'  // Backend tunnel (self)
+    'https://discord-frontend-virid.vercel.app',  // Production frontend
+    'https://discordbackend-xggi.onrender.com'  // Production backend (self)
   ],
   credentials: true,
   methods: ['GET', 'POST'],
@@ -283,8 +283,8 @@ const io = new Server(server, {
       'http://127.0.0.1',
       'http://localhost:5173',
       'https://1414187165146943518.discordsays.com',  // Discord Activity domain
-      'https://gonna-captured-cheers-models.trycloudflare.com',  // Frontend tunnel
-      'https://impressed-henry-probability-buf.trycloudflare.com'  // Backend tunnel (self)
+      'https://discord-frontend-virid.vercel.app',  // Production frontend
+      'https://discordbackend-xggi.onrender.com'  // Production backend (self)
     ],
     methods: ["GET", "POST"],
     credentials: true
@@ -726,9 +726,9 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.join(frontendPath, "index.html"));
   });
 } else {
-  // In development, redirect to the Vite dev server
+  // Redirect to production frontend
   app.get("/", (req, res) => {
-    res.redirect('http://localhost:5173');
+    res.redirect('https://discord-frontend-virid.vercel.app');
   });
 }
 
