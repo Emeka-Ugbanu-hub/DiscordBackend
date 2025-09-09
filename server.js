@@ -254,14 +254,24 @@ app.post('/game-event', (req, res) => {
     // Handle the same events as socket.io but via HTTP
     switch (event) {
       case 'start_question':
-        // Broadcast to room via socket.io if available
+        // For HTTP mode, return the response data instead of broadcasting
+        const questionResponse = {
+          question: null,
+          timeLeft: MAX_TIME,
+          startTime: Date.now()
+        };
+        
+        // Also broadcast to room via socket.io if available
         if (data.roomId && rooms[data.roomId]) {
-          io.to(data.roomId).emit('question_started', {
-            question: null,
-            timeLeft: MAX_TIME
-          });
+          io.to(data.roomId).emit('question_started', questionResponse);
         }
-        break;
+        
+        res.json({ 
+          success: true, 
+          action: 'question_started',
+          data: questionResponse 
+        });
+        return;
       
       case 'select_option':
         // Handle option selection
