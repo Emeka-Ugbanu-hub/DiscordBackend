@@ -218,10 +218,13 @@ app.post('/api/game-event', (req, res) => {
     // Handle the same events as socket.io but via HTTP
     switch (event) {
       case 'start_question':
+        // Generate a random question
+        const randomQuestionForSocket = getRandomQuestion();
+        
         // Broadcast to room via socket.io if available
         if (data.roomId && rooms[data.roomId]) {
           io.to(data.roomId).emit('question_started', {
-            question: null,
+            question: randomQuestionForSocket,
             timeLeft: MAX_TIME
           });
         }
@@ -245,6 +248,20 @@ app.post('/api/game-event', (req, res) => {
   }
 });
 
+// Helper function to pick a random question
+function getRandomQuestion() {
+  const randomIndex = Math.floor(Math.random() * questions.length);
+  const question = questions[randomIndex];
+  
+  // Return question in the same format as the JSON file
+  return {
+    question: question.question,
+    options: question.options,
+    answer: question.answer,
+    id: randomIndex
+  };
+}
+
 // Fallback game event endpoint (Discord strips /api prefix)
 app.post('/game-event', (req, res) => {
   console.log('🎮 Fallback game event endpoint hit (no /api prefix)');
@@ -255,8 +272,9 @@ app.post('/game-event', (req, res) => {
     switch (event) {
       case 'start_question':
         // For HTTP mode, return the response data instead of broadcasting
+        const randomQuestion = getRandomQuestion();
         const questionResponse = {
-          question: null,
+          question: randomQuestion,
           timeLeft: MAX_TIME,
           startTime: Date.now()
         };
