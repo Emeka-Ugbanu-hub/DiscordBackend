@@ -245,6 +245,42 @@ app.post('/api/game-event', (req, res) => {
   }
 });
 
+// Fallback game event endpoint (Discord strips /api prefix)
+app.post('/game-event', (req, res) => {
+  console.log('🎮 Fallback game event endpoint hit (no /api prefix)');
+  const { event, data } = req.body;
+  
+  try {
+    // Handle the same events as socket.io but via HTTP
+    switch (event) {
+      case 'start_question':
+        // Broadcast to room via socket.io if available
+        if (data.roomId && rooms[data.roomId]) {
+          io.to(data.roomId).emit('question_started', {
+            question: null,
+            timeLeft: MAX_TIME
+          });
+        }
+        break;
+      
+      case 'select_option':
+        // Handle option selection
+        if (data.roomId && rooms[data.roomId]) {
+          io.to(data.roomId).emit('player_selected', {
+            playerId: data.playerId,
+            optionIndex: data.optionIndex
+          });
+        }
+        break;
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Fallback game event error:', error);
+    res.status(500).json({ error: 'Failed to process game event' });
+  }
+});
+
 // Game state endpoint for polling
 app.get('/api/game-state/:roomId', (req, res) => {
   const { roomId } = req.params;
