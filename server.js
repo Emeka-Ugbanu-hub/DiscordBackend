@@ -257,13 +257,82 @@ app.post('/api/game-event', (req, res) => {
       
       case 'select_option':
         console.log(`🎯 Option selected for room: ${data.roomId}`, data);
-        // Handle option selection
+        // Handle option selection with competitive flow
         if (data.roomId && rooms[data.roomId]) {
-          // Update room state
-          rooms[data.roomId].lastActive = new Date();
+          const room = rooms[data.roomId];
           
-          // For HTTP, just acknowledge the selection
-          res.json({ success: true });
+          // Store the selection
+          if (!room.currentSelections) {
+            room.currentSelections = {};
+          }
+          
+          room.currentSelections[data.playerId] = {
+            optionIndex: data.optionIndex,
+            timeTaken: data.timeTaken,
+            timestamp: Date.now()
+          };
+          
+          room.lastActive = new Date();
+          
+          console.log(`📊 Player ${data.playerId} selected option ${data.optionIndex}`);
+          console.log(`📊 Room ${data.roomId} selections:`, Object.keys(room.currentSelections).length);
+          
+          // Check if all players have answered or if we need to wait for timer
+          // For now, we'll let the timer handle the reveal
+          // In a full implementation, you'd track connected players and auto-reveal when all answer
+          
+          res.json({ success: true, message: 'Selection recorded' });
+          return;
+        }
+        break;
+        
+      case 'end_round':
+        console.log(`🏁 Ending round for room: ${data.roomId}`);
+        // Handle round completion and reveal all selections
+        if (data.roomId && rooms[data.roomId]) {
+          const room = rooms[data.roomId];
+          
+          // Process selections and calculate scores
+          const roundSelections = room.currentSelections || {};
+          const currentQuestion = room.currentQuestion;
+          
+          if (currentQuestion) {
+            // Calculate scores based on correct answers
+            Object.entries(roundSelections).forEach(([playerId, selection]) => {
+              if (!room.scores) room.scores = {};
+              if (!room.scores[playerId]) room.scores[playerId] = 0;
+              
+              // Check if answer is correct (assuming answer is a letter like 'A', 'B', etc.)
+              const correctIndex = currentQuestion.options?.findIndex(opt => 
+                opt.startsWith(currentQuestion.answer)
+              );
+              
+              if (selection.optionIndex === correctIndex) {
+                room.scores[playerId] += 1;
+                console.log(`✅ Player ${playerId} got it right! New score: ${room.scores[playerId]}`);
+              }
+            });
+          }
+          
+          // Convert selections format for client
+          const clientSelections = {};
+          Object.entries(roundSelections).forEach(([playerId, selection]) => {
+            clientSelections[playerId] = selection.optionIndex;
+          });
+          
+          // Send reveal data
+          res.json({ 
+            success: true, 
+            action: 'round_complete',
+            data: {
+              selections: clientSelections,
+              scores: room.scores,
+              correctAnswer: currentQuestion?.answer
+            }
+          });
+          
+          // Clear selections for next round
+          room.currentSelections = {};
           return;
         }
         break;
