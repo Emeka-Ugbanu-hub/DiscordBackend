@@ -425,10 +425,100 @@ app.post('/game-event', (req, res) => {
       
       case 'select_option':
         console.log(`🎯 Option selected for room: ${data.roomId}`, data);
-        // Handle option selection
+        // Handle option selection with competitive flow (allow changing selection)
         if (data.roomId && rooms[data.roomId]) {
-          // Update room state
-          rooms[data.roomId].lastActive = new Date();
+          const room = rooms[data.roomId];
+          
+          // Store the selection (overwrites previous selection if changed)
+          if (!room.currentSelections) {
+            room.currentSelections = {};
+          }
+          
+          // Log if this is a changed selection
+          const previousSelection = room.currentSelections[data.playerId];
+          const isChange = previousSelection && previousSelection.optionIndex !== data.optionIndex;
+          
+          room.currentSelections[data.playerId] = {
+            optionIndex: data.optionIndex,
+            timeTaken: data.timeTaken,
+            timestamp: Date.now()
+          };
+          
+          room.lastActive = new Date();
+          
+          console.log(`📊 Player ${data.playerId} ${isChange ? 'changed to' : 'selected'} option ${data.optionIndex}`);
+          console.log(`📊 Room ${data.roomId} selections:`, Object.keys(room.currentSelections).length);
+          
+          res.json({ success: true, message: isChange ? 'Selection changed' : 'Selection recorded' });
+          return;
+        }
+        
+        res.json({ success: true });
+        return;
+        
+      case 'end_round':
+        console.log(`🏁 Ending round for room: ${data.roomId}`);
+        // Handle round completion and reveal all selections
+        if (data.roomId && rooms[data.roomId]) {
+          const room = rooms[data.roomId];
+          
+          // Process selections and calculate scores
+          const roundSelections = room.currentSelections || {};
+          const currentQuestion = room.currentQuestion;
+          
+          if (currentQuestion) {
+            console.log('🎯 Scoring round with question:', currentQuestion.question);
+            console.log('🎯 Correct answer:', currentQuestion.answer);
+            console.log('🎯 Options:', currentQuestion.options);
+            
+            // Calculate scores based on correct answers
+            Object.entries(roundSelections).forEach(([playerId, selection]) => {
+              if (!room.scores) room.scores = {};
+              if (!room.scores[playerId]) room.scores[playerId] = 0;
+              
+              // Check if answer is correct (assuming answer is a letter like 'A', 'B', etc.)
+              const correctIndex = currentQuestion.options?.findIndex(opt => 
+                opt.startsWith(currentQuestion.answer)
+              );
+              
+              console.log(`🎯 Player ${playerId} selected option ${selection.optionIndex}, correct index is ${correctIndex}`);
+              
+              if (selection.optionIndex === correctIndex) {
+                room.scores[playerId] += 1;
+                console.log(`✅ Player ${playerId} got it right! New score: ${room.scores[playerId]}`);
+              } else {
+                console.log(`❌ Player ${playerId} got it wrong. Score stays: ${room.scores[playerId]}`);
+              }
+            });
+            
+            console.log('🏆 Final room scores:', room.scores);
+          } else {
+            console.log('⚠️ No current question found for scoring');
+          }
+          
+          // Convert selections format for client
+          const clientSelections = {};
+          Object.entries(roundSelections).forEach(([playerId, selection]) => {
+            clientSelections[playerId] = selection.optionIndex;
+          });
+          
+          // Send reveal data
+          const responseData = {
+            success: true, 
+            action: 'round_complete',
+            data: {
+              selections: clientSelections,
+              scores: room.scores,
+              correctAnswer: currentQuestion?.answer
+            }
+          };
+          
+          console.log('📤 Sending round completion response:', responseData);
+          res.json(responseData);
+          
+          // Clear selections for next round
+          room.currentSelections = {};
+          return;
         }
         
         res.json({ success: true });
