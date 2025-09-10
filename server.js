@@ -215,28 +215,56 @@ app.post('/api/game-event', (req, res) => {
   const { event, data } = req.body;
   
   try {
+    // Ensure room exists for HTTP requests (since no Socket.IO connection creates it)
+    if (data.roomId && !rooms[data.roomId]) {
+      console.log(`🏠 Creating room for HTTP request: ${data.roomId}`);
+      rooms[data.roomId] = {
+        players: {},
+        currentQuestion: null,
+        selections: {},
+        hostSocketId: null,
+        timer: null,
+        gameState: 'waiting',
+        startTime: new Date(),
+        lastActive: new Date(),
+        scores: {},
+        questionHistory: []
+      };
+    }
+    
     // Handle the same events as socket.io but via HTTP
     switch (event) {
       case 'start_question':
+        console.log(`🎯 Starting question for room: ${data.roomId}`);
         // Generate a random question
         const randomQuestionForSocket = getRandomQuestion();
         
-        // Broadcast to room via socket.io if available
+        // Update room state
         if (data.roomId && rooms[data.roomId]) {
-          io.to(data.roomId).emit('question_started', {
+          rooms[data.roomId].currentQuestion = randomQuestionForSocket;
+          rooms[data.roomId].lastActive = new Date();
+          rooms[data.roomId].gameState = 'playing';
+          
+          // For HTTP, return the question directly to the client
+          res.json({ 
+            success: true, 
             question: randomQuestionForSocket,
             timeLeft: MAX_TIME
           });
+          return;
         }
         break;
       
       case 'select_option':
+        console.log(`🎯 Option selected for room: ${data.roomId}`, data);
         // Handle option selection
         if (data.roomId && rooms[data.roomId]) {
-          io.to(data.roomId).emit('player_selected', {
-            playerId: data.playerId,
-            optionIndex: data.optionIndex
-          });
+          // Update room state
+          rooms[data.roomId].lastActive = new Date();
+          
+          // For HTTP, just acknowledge the selection
+          res.json({ success: true });
+          return;
         }
         break;
     }
@@ -268,9 +296,27 @@ app.post('/game-event', (req, res) => {
   const { event, data } = req.body;
   
   try {
+    // Ensure room exists for HTTP requests (since no Socket.IO connection creates it)
+    if (data.roomId && !rooms[data.roomId]) {
+      console.log(`🏠 Creating room for HTTP request: ${data.roomId}`);
+      rooms[data.roomId] = {
+        players: {},
+        currentQuestion: null,
+        selections: {},
+        hostSocketId: null,
+        timer: null,
+        gameState: 'waiting',
+        startTime: new Date(),
+        lastActive: new Date(),
+        scores: {},
+        questionHistory: []
+      };
+    }
+    
     // Handle the same events as socket.io but via HTTP
     switch (event) {
       case 'start_question':
+        console.log(`🎯 Starting question for room: ${data.roomId}`);
         // For HTTP mode, return the response data instead of broadcasting
         const randomQuestion = getRandomQuestion();
         const questionResponse = {
@@ -279,9 +325,11 @@ app.post('/game-event', (req, res) => {
           startTime: Date.now()
         };
         
-        // Also broadcast to room via socket.io if available
+        // Update room state
         if (data.roomId && rooms[data.roomId]) {
-          io.to(data.roomId).emit('question_started', questionResponse);
+          rooms[data.roomId].currentQuestion = randomQuestion;
+          rooms[data.roomId].lastActive = new Date();
+          rooms[data.roomId].gameState = 'playing';
         }
         
         res.json({ 
@@ -292,14 +340,15 @@ app.post('/game-event', (req, res) => {
         return;
       
       case 'select_option':
+        console.log(`🎯 Option selected for room: ${data.roomId}`, data);
         // Handle option selection
         if (data.roomId && rooms[data.roomId]) {
-          io.to(data.roomId).emit('player_selected', {
-            playerId: data.playerId,
-            optionIndex: data.optionIndex
-          });
+          // Update room state
+          rooms[data.roomId].lastActive = new Date();
         }
-        break;
+        
+        res.json({ success: true });
+        return;
     }
     
     res.json({ success: true });
