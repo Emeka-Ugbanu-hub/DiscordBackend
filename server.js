@@ -297,6 +297,10 @@ app.post('/api/game-event', (req, res) => {
           const currentQuestion = room.currentQuestion;
           
           if (currentQuestion) {
+            console.log('🎯 Scoring round with question:', currentQuestion.question);
+            console.log('🎯 Correct answer:', currentQuestion.answer);
+            console.log('🎯 Options:', currentQuestion.options);
+            
             // Calculate scores based on correct answers
             Object.entries(roundSelections).forEach(([playerId, selection]) => {
               if (!room.scores) room.scores = {};
@@ -307,11 +311,19 @@ app.post('/api/game-event', (req, res) => {
                 opt.startsWith(currentQuestion.answer)
               );
               
+              console.log(`🎯 Player ${playerId} selected option ${selection.optionIndex}, correct index is ${correctIndex}`);
+              
               if (selection.optionIndex === correctIndex) {
                 room.scores[playerId] += 1;
                 console.log(`✅ Player ${playerId} got it right! New score: ${room.scores[playerId]}`);
+              } else {
+                console.log(`❌ Player ${playerId} got it wrong. Score stays: ${room.scores[playerId]}`);
               }
             });
+            
+            console.log('🏆 Final room scores:', room.scores);
+          } else {
+            console.log('⚠️ No current question found for scoring');
           }
           
           // Convert selections format for client
@@ -321,7 +333,7 @@ app.post('/api/game-event', (req, res) => {
           });
           
           // Send reveal data
-          res.json({ 
+          const responseData = {
             success: true, 
             action: 'round_complete',
             data: {
@@ -329,7 +341,10 @@ app.post('/api/game-event', (req, res) => {
               scores: room.scores,
               correctAnswer: currentQuestion?.answer
             }
-          });
+          };
+          
+          console.log('📤 Sending round completion response:', responseData);
+          res.json(responseData);
           
           // Clear selections for next round
           room.currentSelections = {};
