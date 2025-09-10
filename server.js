@@ -257,14 +257,18 @@ app.post('/api/game-event', (req, res) => {
       
       case 'select_option':
         console.log(`🎯 Option selected for room: ${data.roomId}`, data);
-        // Handle option selection with competitive flow
+        // Handle option selection with competitive flow (allow changing selection)
         if (data.roomId && rooms[data.roomId]) {
           const room = rooms[data.roomId];
           
-          // Store the selection
+          // Store the selection (overwrites previous selection if changed)
           if (!room.currentSelections) {
             room.currentSelections = {};
           }
+          
+          // Log if this is a changed selection
+          const previousSelection = room.currentSelections[data.playerId];
+          const isChange = previousSelection && previousSelection.optionIndex !== data.optionIndex;
           
           room.currentSelections[data.playerId] = {
             optionIndex: data.optionIndex,
@@ -274,14 +278,10 @@ app.post('/api/game-event', (req, res) => {
           
           room.lastActive = new Date();
           
-          console.log(`📊 Player ${data.playerId} selected option ${data.optionIndex}`);
+          console.log(`📊 Player ${data.playerId} ${isChange ? 'changed to' : 'selected'} option ${data.optionIndex}`);
           console.log(`📊 Room ${data.roomId} selections:`, Object.keys(room.currentSelections).length);
           
-          // Check if all players have answered or if we need to wait for timer
-          // For now, we'll let the timer handle the reveal
-          // In a full implementation, you'd track connected players and auto-reveal when all answer
-          
-          res.json({ success: true, message: 'Selection recorded' });
+          res.json({ success: true, message: isChange ? 'Selection changed' : 'Selection recorded' });
           return;
         }
         break;
