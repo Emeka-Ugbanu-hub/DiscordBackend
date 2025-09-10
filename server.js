@@ -26,6 +26,11 @@ const PORT = process.env.PORT || 3001;
 const CLIENT_ID = process.env.VITE_DISCORD_CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const MAX_TIME = 15;
+
+// Scoring configuration (matching client-side)
+const MAX_POINTS = 150; // points for an instant (maximum)
+const SCORING_EXPONENT = 2; // power curve exponent for time-based scoring
+
 const ROOM_CLEANUP_INTERVAL = 1000 * 60 * 30; // 30 minutes
 const ROOM_INACTIVE_THRESHOLD = 1000 * 60 * 60; // 1 hour
 
@@ -301,7 +306,7 @@ app.post('/api/game-event', (req, res) => {
             console.log('🎯 Correct answer:', currentQuestion.answer);
             console.log('🎯 Options:', currentQuestion.options);
             
-            // Calculate scores based on correct answers
+            // Calculate scores based on correct answers and time taken
             Object.entries(roundSelections).forEach(([playerId, selection]) => {
               if (!room.scores) room.scores = {};
               if (!room.scores[playerId]) room.scores[playerId] = 0;
@@ -314,8 +319,10 @@ app.post('/api/game-event', (req, res) => {
               console.log(`🎯 Player ${playerId} selected option ${selection.optionIndex}, correct index is ${correctIndex}`);
               
               if (selection.optionIndex === correctIndex) {
-                room.scores[playerId] += 1;
-                console.log(`✅ Player ${playerId} got it right! New score: ${room.scores[playerId]}`);
+                // Calculate time-based points
+                const points = calculatePointsFromTime(selection.timeTaken);
+                room.scores[playerId] += points;
+                console.log(`✅ Player ${playerId} got it right! Time taken: ${selection.timeTaken}s, Points awarded: ${points}, New total: ${room.scores[playerId]}`);
               } else {
                 console.log(`❌ Player ${playerId} got it wrong. Score stays: ${room.scores[playerId]}`);
               }
@@ -359,6 +366,22 @@ app.post('/api/game-event', (req, res) => {
     res.status(500).json({ error: 'Failed to process game event' });
   }
 });
+
+// Helper function to calculate time-based points (matching client-side logic)
+function calculatePointsFromTime(timeTaken) {
+  if (!timeTaken || timeTaken <= 0) return 0;
+  
+  // Calculate time left (MAX_TIME - timeTaken)
+  const timeLeft = Math.max(0, MAX_TIME - timeTaken);
+  
+  // Normalize to [0..1] range
+  const x = Math.max(0, Math.min(1, timeLeft / MAX_TIME));
+  
+  // Apply power curve: f(x) = MAX_POINTS * x^SCORING_EXPONENT
+  const raw = MAX_POINTS * Math.pow(x, SCORING_EXPONENT);
+  
+  return Math.round(raw);
+}
 
 // Helper function to pick a random question
 function getRandomQuestion() {
@@ -471,7 +494,7 @@ app.post('/game-event', (req, res) => {
             console.log('🎯 Correct answer:', currentQuestion.answer);
             console.log('🎯 Options:', currentQuestion.options);
             
-            // Calculate scores based on correct answers
+            // Calculate scores based on correct answers and time taken
             Object.entries(roundSelections).forEach(([playerId, selection]) => {
               if (!room.scores) room.scores = {};
               if (!room.scores[playerId]) room.scores[playerId] = 0;
@@ -484,8 +507,10 @@ app.post('/game-event', (req, res) => {
               console.log(`🎯 Player ${playerId} selected option ${selection.optionIndex}, correct index is ${correctIndex}`);
               
               if (selection.optionIndex === correctIndex) {
-                room.scores[playerId] += 1;
-                console.log(`✅ Player ${playerId} got it right! New score: ${room.scores[playerId]}`);
+                // Calculate time-based points
+                const points = calculatePointsFromTime(selection.timeTaken);
+                room.scores[playerId] += points;
+                console.log(`✅ Player ${playerId} got it right! Time taken: ${selection.timeTaken}s, Points awarded: ${points}, New total: ${room.scores[playerId]}`);
               } else {
                 console.log(`❌ Player ${playerId} got it wrong. Score stays: ${room.scores[playerId]}`);
               }
