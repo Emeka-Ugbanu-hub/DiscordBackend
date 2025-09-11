@@ -369,18 +369,29 @@ app.post('/api/game-event', (req, res) => {
 
 // Helper function to calculate time-based points (matching client-side logic)
 function calculatePointsFromTime(timeTaken) {
-  if (!timeTaken || timeTaken <= 0) return 0;
+  console.log(`🔍 calculatePointsFromTime called with: timeTaken=${timeTaken}, type=${typeof timeTaken}`);
+  
+  if (!timeTaken || timeTaken <= 0) {
+    console.log(`🔍 Returning 0 because timeTaken is invalid: ${timeTaken}`);
+    return 0;
+  }
   
   // Calculate time left (MAX_TIME - timeTaken)
   const timeLeft = Math.max(0, MAX_TIME - timeTaken);
+  console.log(`🔍 timeLeft = MAX_TIME(${MAX_TIME}) - timeTaken(${timeTaken}) = ${timeLeft}`);
   
   // Normalize to [0..1] range
   const x = Math.max(0, Math.min(1, timeLeft / MAX_TIME));
+  console.log(`🔍 x = timeLeft(${timeLeft}) / MAX_TIME(${MAX_TIME}) = ${x}`);
   
   // Apply power curve: f(x) = MAX_POINTS * x^SCORING_EXPONENT
   const raw = MAX_POINTS * Math.pow(x, SCORING_EXPONENT);
+  console.log(`🔍 raw = MAX_POINTS(${MAX_POINTS}) * x(${x})^${SCORING_EXPONENT} = ${raw}`);
   
-  return Math.round(raw);
+  const points = Math.round(raw);
+  console.log(`🔍 Final points = Math.round(${raw}) = ${points}`);
+  
+  return points;
 }
 
 // Helper function to pick a random question
