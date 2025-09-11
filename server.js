@@ -351,7 +351,8 @@ app.post('/api/game-event', (req, res) => {
             action: 'round_complete',
             data: {
               selections: clientSelections,
-              scores: room.scores,
+              scores: room.scores || {},
+              playerNames: room.playerNames || {},
               correctAnswer: currentQuestion?.answer
             }
           };
