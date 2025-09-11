@@ -233,6 +233,7 @@ app.post('/api/game-event', (req, res) => {
         startTime: new Date(),
         lastActive: new Date(),
         scores: {},
+        playerNames: {}, // Track player names for display
         questionHistory: []
       };
     }
@@ -280,6 +281,11 @@ app.post('/api/game-event', (req, res) => {
             timeTaken: data.timeTaken,
             timestamp: Date.now()
           };
+          
+          // Store player name for display purposes
+          if (data.playerName) {
+            room.playerNames[data.playerId] = data.playerName;
+          }
           
           room.lastActive = new Date();
           
@@ -427,6 +433,7 @@ app.post('/game-event', (req, res) => {
         startTime: new Date(),
         lastActive: new Date(),
         scores: {},
+        playerNames: {}, // Track player names for display
         questionHistory: []
       };
     }
@@ -477,6 +484,11 @@ app.post('/game-event', (req, res) => {
             timeTaken: data.timeTaken,
             timestamp: Date.now()
           };
+          
+          // Store player name for display purposes
+          if (data.playerName) {
+            room.playerNames[data.playerId] = data.playerName;
+          }
           
           room.lastActive = new Date();
           
