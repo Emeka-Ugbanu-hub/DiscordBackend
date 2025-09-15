@@ -449,6 +449,7 @@ app.post('/api/game-event', (req, res) => {
           room.gameState = 'waiting'; // Reset game state
           room.questionStartTime = null; // Clear question start time
           console.log('🔄 [/api/game-event] Room state cleared for next question');
+          return;
         }
         break;
     }
@@ -845,6 +846,7 @@ app.post('/game-event', (req, res) => {
           room.gameState = 'waiting'; // Reset game state
           room.questionStartTime = null; // Clear question start time
           console.log('🔄 [/game-event] Room state cleared for next question');
+          return;
         }
         break;
     }
