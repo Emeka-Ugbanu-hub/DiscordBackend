@@ -250,19 +250,29 @@ app.post('/api/game-event', (req, res) => {
           // If room already has an active question and game is in progress, return existing question
           if (room.currentQuestion && room.gameState === 'playing' && !room.roundEnded) {
             console.log('📋 Returning existing question for synchronization');
+            
+            // Calculate remaining time based on when question started
+            const now = Date.now();
+            const questionStartTime = room.questionStartTime || now;
+            const elapsedSeconds = Math.floor((now - questionStartTime) / 1000);
+            const remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
+            
             res.json({ 
               success: true, 
               question: room.currentQuestion,
-              timeLeft: MAX_TIME // Reset timer for newly joined player
+              timeLeft: remainingTime,
+              startTime: questionStartTime
             });
             return;
           }
           
           // Generate new question only if no active question or round ended
           const randomQuestionForSocket = getRandomQuestion();
+          const questionStartTime = Date.now();
           
           // Update room state with new question
           room.currentQuestion = randomQuestionForSocket;
+          room.questionStartTime = questionStartTime;
           room.lastActive = new Date();
           room.gameState = 'playing';
           room.roundEnded = false; // Reset round ended flag for new question
@@ -274,7 +284,8 @@ app.post('/api/game-event', (req, res) => {
           res.json({ 
             success: true, 
             question: randomQuestionForSocket,
-            timeLeft: MAX_TIME
+            timeLeft: MAX_TIME,
+            startTime: questionStartTime
           });
           return;
         }
@@ -565,16 +576,41 @@ app.post('/game-event', (req, res) => {
             return;
           }
           
+          // If room already has an active question and game is in progress, return existing question
+          if (room.currentQuestion && room.gameState === 'playing' && !room.roundEnded) {
+            console.log('📋 Returning existing question for synchronization');
+            
+            // Calculate remaining time based on when question started
+            const now = Date.now();
+            const questionStartTime = room.questionStartTime || now;
+            const elapsedSeconds = Math.floor((now - questionStartTime) / 1000);
+            const remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
+            
+            const questionResponse = {
+              question: room.currentQuestion,
+              timeLeft: remainingTime,
+              startTime: questionStartTime
+            };
+            res.json({ 
+              success: true, 
+              action: 'question_started',
+              data: questionResponse 
+            });
+            return;
+          }
+          
           // Generate new question only if no active question or round ended
           const randomQuestion = getRandomQuestion();
+          const questionStartTime = Date.now();
           const questionResponse = {
             question: randomQuestion,
             timeLeft: MAX_TIME,
-            startTime: Date.now()
+            startTime: questionStartTime
           };
           
           // Update room state with new question
           room.currentQuestion = randomQuestion;
+          room.questionStartTime = questionStartTime;
           room.lastActive = new Date();
           room.gameState = 'playing';
           room.roundEnded = false;
