@@ -217,6 +217,7 @@ app.get('/api/discord-test', (req, res) => {
 
 // Game event endpoint for HTTP-based communication
 app.post('/api/game-event', (req, res) => {
+  console.log('🎮 [/api/game-event] Received request:', req.body);
   const { event, data } = req.body;
   
   try {
@@ -529,7 +530,7 @@ function getRandomQuestion() {
 
 // Fallback game event endpoint (Discord strips /api prefix)
 app.post('/game-event', (req, res) => {
-  console.log('🎮 Fallback game event endpoint hit (no /api prefix)');
+  console.log('🎮 [/game-event] Fallback endpoint hit:', req.body);
   const { event, data } = req.body;
   
   try {
