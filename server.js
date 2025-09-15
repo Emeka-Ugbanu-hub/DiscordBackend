@@ -242,15 +242,33 @@ app.post('/api/game-event', (req, res) => {
     switch (event) {
       case 'start_question':
         console.log(`🎯 Starting question for room: ${data.roomId}`);
-        // Generate a random question
-        const randomQuestionForSocket = getRandomQuestion();
         
-        // Update room state
+        // Check if room exists
         if (data.roomId && rooms[data.roomId]) {
-          rooms[data.roomId].currentQuestion = randomQuestionForSocket;
-          rooms[data.roomId].lastActive = new Date();
-          rooms[data.roomId].gameState = 'playing';
-          rooms[data.roomId].roundEnded = false; // Reset round ended flag for new question
+          const room = rooms[data.roomId];
+          
+          // If room already has an active question and game is in progress, return existing question
+          if (room.currentQuestion && room.gameState === 'playing' && !room.roundEnded) {
+            console.log('📋 Returning existing question for synchronization');
+            res.json({ 
+              success: true, 
+              question: room.currentQuestion,
+              timeLeft: MAX_TIME // Reset timer for newly joined player
+            });
+            return;
+          }
+          
+          // Generate new question only if no active question or round ended
+          const randomQuestionForSocket = getRandomQuestion();
+          
+          // Update room state with new question
+          room.currentQuestion = randomQuestionForSocket;
+          room.lastActive = new Date();
+          room.gameState = 'playing';
+          room.roundEnded = false; // Reset round ended flag for new question
+          room.currentSelections = {}; // Clear previous selections
+          
+          console.log('🆕 Generated new question for room:', randomQuestionForSocket.isCard ? 'Card Question' : 'Trivia Question');
           
           // For HTTP, return the question directly to the client
           res.json({ 
@@ -526,27 +544,52 @@ app.post('/game-event', (req, res) => {
     switch (event) {
       case 'start_question':
         console.log(`🎯 Starting question for room: ${data.roomId}`);
-        // For HTTP mode, return the response data instead of broadcasting
-        const randomQuestion = getRandomQuestion();
-        const questionResponse = {
-          question: randomQuestion,
-          timeLeft: MAX_TIME,
-          startTime: Date.now()
-        };
         
-        // Update room state
+        // Check if room exists
         if (data.roomId && rooms[data.roomId]) {
-          rooms[data.roomId].currentQuestion = randomQuestion;
-          rooms[data.roomId].lastActive = new Date();
-          rooms[data.roomId].gameState = 'playing';
+          const room = rooms[data.roomId];
+          
+          // If room already has an active question and game is in progress, return existing question
+          if (room.currentQuestion && room.gameState === 'playing' && !room.roundEnded) {
+            console.log('📋 Returning existing question for synchronization');
+            const questionResponse = {
+              question: room.currentQuestion,
+              timeLeft: MAX_TIME,
+              startTime: Date.now()
+            };
+            res.json({ 
+              success: true, 
+              action: 'question_started',
+              data: questionResponse 
+            });
+            return;
+          }
+          
+          // Generate new question only if no active question or round ended
+          const randomQuestion = getRandomQuestion();
+          const questionResponse = {
+            question: randomQuestion,
+            timeLeft: MAX_TIME,
+            startTime: Date.now()
+          };
+          
+          // Update room state with new question
+          room.currentQuestion = randomQuestion;
+          room.lastActive = new Date();
+          room.gameState = 'playing';
+          room.roundEnded = false;
+          room.currentSelections = {}; // Clear previous selections
+          
+          console.log('🆕 Generated new question for room:', randomQuestion.isCard ? 'Card Question' : 'Trivia Question');
+          
+          res.json({ 
+            success: true, 
+            action: 'question_started',
+            data: questionResponse 
+          });
+          return;
         }
-        
-        res.json({ 
-          success: true, 
-          action: 'question_started',
-          data: questionResponse 
-        });
-        return;
+        break;
       
       case 'select_option':
         console.log(`🎯 Option selected for room: ${data.roomId}`, data);
