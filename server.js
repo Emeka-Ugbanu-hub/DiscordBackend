@@ -291,10 +291,10 @@ app.post('/api/game-event', (req, res) => {
             return;
           }
           
-          // Mark that we're generating a question
+          // Mark that we're generating a question (prevent race conditions)
           room.generatingQuestion = true;
           
-          // Generate new question only if no active question or round ended
+          // Generate new question - clear round ended state since we're starting fresh
           const randomQuestionForSocket = getRandomQuestion();
           const questionStartTime = Date.now();
           
@@ -442,13 +442,11 @@ app.post('/api/game-event', (req, res) => {
           console.log('📤 Sending round completion response:', responseData);
           res.json(responseData);
           
-          // Clear selections for next round
+          // Clear selections for next round but keep question until next round starts
           room.currentSelections = {};
-          // Clear round state for next question
-          room.currentQuestion = null; // Clear current question to allow new ones
-          room.gameState = 'waiting'; // Reset game state
-          room.questionStartTime = null; // Clear question start time
-          console.log('🔄 [/api/game-event] Room state cleared for next question');
+          // Mark round as ended but don't clear question yet - let next question request handle it
+          room.roundEnded = true;
+          console.log('🔄 [/api/game-event] Round marked as completed, ready for next question');
           return;
         }
         break;
@@ -839,13 +837,11 @@ app.post('/game-event', (req, res) => {
           console.log('📤 Sending round completion response:', responseData);
           res.json(responseData);
           
-          // Clear selections for next round
+          // Clear selections for next round but keep question until next round starts
           room.currentSelections = {};
-          // Clear round state for next question
-          room.currentQuestion = null; // Clear current question to allow new ones
-          room.gameState = 'waiting'; // Reset game state
-          room.questionStartTime = null; // Clear question start time
-          console.log('🔄 [/game-event] Room state cleared for next question');
+          // Mark round as ended but don't clear question yet - let next question request handle it
+          room.roundEnded = true;
+          console.log('🔄 [/game-event] Round marked as completed, ready for next question');
           return;
         }
         break;
