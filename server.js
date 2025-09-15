@@ -443,12 +443,13 @@ app.post('/api/game-event', (req, res) => {
           res.json(responseData);
           
           // Clear selections for next round
+          room.currentSelections = {};
           // Clear round state for next question
-          return;
           room.currentQuestion = null; // Clear current question to allow new ones
           room.gameState = 'waiting'; // Reset game state
           room.questionStartTime = null; // Clear question start time
-          console.log('🔄 [/api/game-event] Room state cleared for next question');        }
+          console.log('🔄 [/api/game-event] Room state cleared for next question');
+        }
         break;
     }
     
@@ -840,11 +841,12 @@ app.post('/game-event', (req, res) => {
           // Clear selections for next round
           room.currentSelections = {};
           // Clear round state for next question
-        }
           room.currentQuestion = null; // Clear current question to allow new ones
           room.gameState = 'waiting'; // Reset game state
           room.questionStartTime = null; // Clear question start time
-          console.log('🔄 [/game-event] Room state cleared for next question');        break;
+          console.log('🔄 [/game-event] Room state cleared for next question');
+        }
+        break;
     }
     
     res.json({ success: true });
