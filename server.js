@@ -242,7 +242,7 @@ app.post('/api/game-event', (req, res) => {
     // Handle the same events as socket.io but via HTTP
     switch (event) {
       case 'start_question':
-        console.log(`🎯 Starting question for room: ${data.roomId}`);
+        console.log(`🎯 [/api/game-event] Starting question for room: ${data.roomId}`);
         
         // Check if room exists
         if (data.roomId && rooms[data.roomId]) {
@@ -267,6 +267,33 @@ app.post('/api/game-event', (req, res) => {
             return;
           }
           
+          // Check if someone is already generating a question (prevent race condition)
+          if (room.generatingQuestion) {
+            console.log('⏳ Question generation in progress, waiting...');
+            // Wait a bit and check again
+            setTimeout(() => {
+              if (room.currentQuestion) {
+                const now = Date.now();
+                const questionStartTime = room.questionStartTime || now;
+                const elapsedSeconds = Math.floor((now - questionStartTime) / 1000);
+                const remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
+                
+                res.json({ 
+                  success: true, 
+                  question: room.currentQuestion,
+                  timeLeft: remainingTime,
+                  startTime: questionStartTime
+                });
+              } else {
+                res.json({ success: false, error: 'Failed to generate question' });
+              }
+            }, 100);
+            return;
+          }
+          
+          // Mark that we're generating a question
+          room.generatingQuestion = true;
+          
           // Generate new question only if no active question or round ended
           const randomQuestionForSocket = getRandomQuestion();
           const questionStartTime = Date.now();
@@ -278,6 +305,7 @@ app.post('/api/game-event', (req, res) => {
           room.gameState = 'playing';
           room.roundEnded = false; // Reset round ended flag for new question
           room.currentSelections = {}; // Clear previous selections
+          room.generatingQuestion = false; // Clear the lock
           
           console.log('🆕 Generated new question for room:', randomQuestionForSocket.isCard ? 'Card Question' : 'Trivia Question');
           
@@ -415,9 +443,12 @@ app.post('/api/game-event', (req, res) => {
           res.json(responseData);
           
           // Clear selections for next round
-          room.currentSelections = {};
+          // Clear round state for next question
           return;
-        }
+          room.currentQuestion = null; // Clear current question to allow new ones
+          room.gameState = 'waiting'; // Reset game state
+          room.questionStartTime = null; // Clear question start time
+          console.log('🔄 [/api/game-event] Room state cleared for next question');        }
         break;
     }
     
@@ -555,11 +586,63 @@ app.post('/game-event', (req, res) => {
     // Handle the same events as socket.io but via HTTP
     switch (event) {
       case 'start_question':
-        console.log(`🎯 Starting question for room: ${data.roomId}`);
+        console.log(`🎯 [/game-event] Starting question for room: ${data.roomId}`);
         
         // Check if room exists
         if (data.roomId && rooms[data.roomId]) {
           const room = rooms[data.roomId];
+          
+          // If room already has an active question and game is in progress, return existing question
+          if (room.currentQuestion && room.gameState === 'playing' && !room.roundEnded) {
+            console.log('📋 Returning existing question for synchronization');
+            
+            // Calculate remaining time based on when question started
+            const now = Date.now();
+            const questionStartTime = room.questionStartTime || now;
+            const elapsedSeconds = Math.floor((now - questionStartTime) / 1000);
+            const remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
+            
+            res.json({ 
+              success: true, 
+              action: 'question_started',
+              data: {
+                question: room.currentQuestion,
+                timeLeft: remainingTime,
+                startTime: questionStartTime
+              }
+            });
+            return;
+          }
+          
+          // Check if someone is already generating a question (prevent race condition)
+          if (room.generatingQuestion) {
+            console.log('⏳ Question generation in progress, waiting...');
+            // Wait a bit and check again
+            setTimeout(() => {
+              if (room.currentQuestion) {
+                const now = Date.now();
+                const questionStartTime = room.questionStartTime || now;
+                const elapsedSeconds = Math.floor((now - questionStartTime) / 1000);
+                const remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
+                
+                res.json({ 
+                  success: true, 
+                  action: 'question_started',
+                  data: {
+                    question: room.currentQuestion,
+                    timeLeft: remainingTime,
+                    startTime: questionStartTime
+                  }
+                });
+              } else {
+                res.json({ success: false, error: 'Failed to generate question' });
+              }
+            }, 100);
+            return;
+          }
+          
+          // Mark that we're generating a question
+          room.generatingQuestion = true;
           
           // If room already has an active question and game is in progress, return existing question
           if (room.currentQuestion && room.gameState === 'playing' && !room.roundEnded) {
@@ -603,11 +686,6 @@ app.post('/game-event', (req, res) => {
           // Generate new question only if no active question or round ended
           const randomQuestion = getRandomQuestion();
           const questionStartTime = Date.now();
-          const questionResponse = {
-            question: randomQuestion,
-            timeLeft: MAX_TIME,
-            startTime: questionStartTime
-          };
           
           // Update room state with new question
           room.currentQuestion = randomQuestion;
@@ -616,8 +694,15 @@ app.post('/game-event', (req, res) => {
           room.gameState = 'playing';
           room.roundEnded = false;
           room.currentSelections = {}; // Clear previous selections
+          room.generatingQuestion = false; // Clear the lock
           
           console.log('🆕 Generated new question for room:', randomQuestion.isCard ? 'Card Question' : 'Trivia Question');
+          
+          const questionResponse = {
+            question: randomQuestion,
+            timeLeft: MAX_TIME,
+            startTime: questionStartTime
+          };
           
           res.json({ 
             success: true, 
@@ -754,9 +839,12 @@ app.post('/game-event', (req, res) => {
           
           // Clear selections for next round
           room.currentSelections = {};
-          return;
+          // Clear round state for next question
         }
-        break;
+          room.currentQuestion = null; // Clear current question to allow new ones
+          room.gameState = 'waiting'; // Reset game state
+          room.questionStartTime = null; // Clear question start time
+          console.log('🔄 [/game-event] Room state cleared for next question');        break;
     }
     
     res.json({ success: true });
