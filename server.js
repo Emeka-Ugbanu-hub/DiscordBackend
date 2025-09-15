@@ -665,6 +665,98 @@ app.post('/game-event', (req, res) => {
         
         res.json({ success: true });
         return;
+        
+      case 'end_round':
+        console.log(`🏁 [/game-event] Ending round for room: ${data.roomId}`);
+        // Handle round completion and reveal all selections
+        if (data.roomId && rooms[data.roomId]) {
+          const room = rooms[data.roomId];
+          
+          // Prevent duplicate round endings
+          if (room.roundEnded) {
+            console.log('⚠️ Round already ended for this room, skipping duplicate request');
+            res.json({ 
+              success: true, 
+              action: 'round_complete',
+              data: {
+                selections: room.lastSelections || {},
+                scores: room.scores || {},
+                playerNames: room.playerNames || {},
+                correctAnswer: room.lastCorrectAnswer
+              }
+            });
+            return;
+          }
+          
+          // Mark round as ended
+          room.roundEnded = true;
+          
+          // Process selections and calculate scores
+          const roundSelections = room.currentSelections || {};
+          const currentQuestion = room.currentQuestion;
+          
+          if (currentQuestion) {
+            console.log('🎯 Scoring round with question:', currentQuestion.question);
+            console.log('🎯 Correct answer:', currentQuestion.answer);
+            console.log('🎯 Options:', currentQuestion.options);
+            
+            // Calculate scores based on correct answers and time taken
+            Object.entries(roundSelections).forEach(([playerId, selection]) => {
+              if (!room.scores) room.scores = {};
+              if (!room.scores[playerId]) room.scores[playerId] = 0;
+              
+              // Check if answer is correct (assuming answer is a letter like 'A', 'B', etc.)
+              const correctIndex = currentQuestion.options?.findIndex(opt => 
+                opt.startsWith(currentQuestion.answer)
+              );
+              
+              console.log(`🎯 Player ${playerId} selected option ${selection.optionIndex}, correct index is ${correctIndex}`);
+              
+              if (selection.optionIndex === correctIndex) {
+                // Calculate time-based points
+                const points = calculatePointsFromTime(selection.timeTaken);
+                room.scores[playerId] += points;
+                console.log(`✅ Player ${playerId} got it right! Time taken: ${selection.timeTaken}s, Points awarded: ${points}, New total: ${room.scores[playerId]}`);
+              } else {
+                console.log(`❌ Player ${playerId} got it wrong. Score stays: ${room.scores[playerId]}`);
+              }
+            });
+            
+            console.log('🏆 Final room scores:', room.scores);
+          } else {
+            console.log('⚠️ No current question found for scoring');
+          }
+          
+          // Convert selections format for client
+          const clientSelections = {};
+          Object.entries(roundSelections).forEach(([playerId, selection]) => {
+            clientSelections[playerId] = selection.optionIndex;
+          });
+          
+          // Store results for duplicate requests
+          room.lastSelections = clientSelections;
+          room.lastCorrectAnswer = currentQuestion?.answer;
+          
+          // Send reveal data
+          const responseData = {
+            success: true, 
+            action: 'round_complete',
+            data: {
+              selections: clientSelections,
+              scores: room.scores || {},
+              playerNames: room.playerNames || {},
+              correctAnswer: currentQuestion?.answer
+            }
+          };
+          
+          console.log('📤 Sending round completion response:', responseData);
+          res.json(responseData);
+          
+          // Clear selections for next round
+          room.currentSelections = {};
+          return;
+        }
+        break;
     }
     
     res.json({ success: true });
