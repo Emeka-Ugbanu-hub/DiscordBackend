@@ -871,17 +871,35 @@ app.get('/api/game-state/:roomId', (req, res) => {
   const { roomId } = req.params;
   
   try {
+    // Ensure room exists (create if needed for HTTP requests)
+    if (roomId && !rooms[roomId]) {
+      console.log(`🏠 [game-state] Creating room for request: ${roomId}`);
+      rooms[roomId] = {
+        players: {},
+        currentQuestion: null,
+        selections: {},
+        hostSocketId: null,
+        timer: null,
+        gameState: 'waiting',
+        startTime: new Date(),
+        lastActive: new Date(),
+        scores: {},
+        playerNames: {},
+        questionHistory: []
+      };
+    }
+    
     const room = rooms[roomId];
     if (room && room.currentQuestion) {
-      // Calculate remaining time if question is active
+      // Calculate remaining time based on when question started
       let remainingTime = MAX_TIME;
-      if (room.questionStartTime && room.gameState === 'playing' && !room.roundEnded) {
+      if (room.questionStartTime) {
         const now = Date.now();
         const elapsedSeconds = Math.floor((now - room.questionStartTime) / 1000);
         remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
-      } else if (room.roundEnded) {
-        remainingTime = 0; // Round is over
       }
+      
+      console.log('📋 [game-state] Returning existing question for room:', roomId, 'timeLeft:', remainingTime);
       
       res.json({
         success: true,
@@ -893,6 +911,7 @@ app.get('/api/game-state/:roomId', (req, res) => {
         questionStartTime: room.questionStartTime
       });
     } else {
+      console.log('📋 [game-state] No current question for room:', roomId);
       res.json({
         success: true,
         currentQuestion: null,
