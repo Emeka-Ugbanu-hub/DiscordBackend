@@ -248,9 +248,9 @@ app.post('/api/game-event', (req, res) => {
         if (data.roomId && rooms[data.roomId]) {
           const room = rooms[data.roomId];
           
-          // If room already has an active question and game is in progress, return existing question
-          if (room.currentQuestion && room.gameState === 'playing' && !room.roundEnded) {
-            console.log('📋 Returning existing question for synchronization');
+          // If not forcing new question and room has existing question, return it
+          if (!data.forceNew && room.currentQuestion) {
+            console.log('📋 Returning existing question for synchronization (roundEnded:', room.roundEnded, ')');
             
             // Calculate remaining time based on when question started
             const now = Date.now();
@@ -262,9 +262,15 @@ app.post('/api/game-event', (req, res) => {
               success: true, 
               question: room.currentQuestion,
               timeLeft: remainingTime,
-              startTime: questionStartTime
+              startTime: questionStartTime,
+              showResult: room.roundEnded || remainingTime <= 0
             });
             return;
+          }
+          
+          // If forcing new question or no existing question, generate new one
+          if (data.forceNew) {
+            console.log('🆕 Force new question requested (Next button clicked)');
           }
           
           // Check if someone is already generating a question (prevent race condition)
@@ -592,9 +598,9 @@ app.post('/game-event', (req, res) => {
         if (data.roomId && rooms[data.roomId]) {
           const room = rooms[data.roomId];
           
-          // If room already has an active question and game is in progress, return existing question
-          if (room.currentQuestion && room.gameState === 'playing' && !room.roundEnded) {
-            console.log('📋 Returning existing question for synchronization');
+          // If not forcing new question and room has existing question, return it
+          if (!data.forceNew && room.currentQuestion) {
+            console.log('📋 [/game-event] Returning existing question for synchronization (roundEnded:', room.roundEnded, ')');
             
             // Calculate remaining time based on when question started
             const now = Date.now();
@@ -608,10 +614,16 @@ app.post('/game-event', (req, res) => {
               data: {
                 question: room.currentQuestion,
                 timeLeft: remainingTime,
-                startTime: questionStartTime
+                startTime: questionStartTime,
+                showResult: room.roundEnded || remainingTime <= 0
               }
             });
             return;
+          }
+          
+          // If forcing new question or no existing question, generate new one
+          if (data.forceNew) {
+            console.log('🆕 [/game-event] Force new question requested (Next button clicked)');
           }
           
           // Check if someone is already generating a question (prevent race condition)
