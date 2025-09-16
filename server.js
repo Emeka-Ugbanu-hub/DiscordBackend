@@ -854,29 +854,41 @@ app.post('/game-event', (req, res) => {
   }
 });
 
-// Game state endpoint for polling
+// Game state endpoint for polling (read-only, doesn't generate questions)
 app.get('/api/game-state/:roomId', (req, res) => {
   const { roomId } = req.params;
   
   try {
     const room = rooms[roomId];
-    if (room) {
+    if (room && room.currentQuestion) {
+      // Calculate remaining time if question is active
+      let remainingTime = MAX_TIME;
+      if (room.questionStartTime && room.gameState === 'playing' && !room.roundEnded) {
+        const now = Date.now();
+        const elapsedSeconds = Math.floor((now - room.questionStartTime) / 1000);
+        remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
+      } else if (room.roundEnded) {
+        remainingTime = 0; // Round is over
+      }
+      
       res.json({
+        success: true,
         currentQuestion: room.currentQuestion,
-        selections: room.selections,
-        showResult: room.showResult,
-        timeLeft: room.timeLeft,
-        scores: room.scores,
-        players: room.players
+        timeLeft: remainingTime,
+        showResult: room.roundEnded || remainingTime <= 0,
+        gameState: room.gameState,
+        roundEnded: room.roundEnded,
+        questionStartTime: room.questionStartTime
       });
     } else {
       res.json({
+        success: true,
         currentQuestion: null,
-        selections: {},
-        showResult: false,
         timeLeft: MAX_TIME,
-        scores: {},
-        players: []
+        showResult: false,
+        gameState: 'waiting',
+        roundEnded: false,
+        questionStartTime: null
       });
     }
   } catch (error) {
