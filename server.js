@@ -1040,33 +1040,60 @@ app.post('/api/start_question', (req, res) => {
       });
     }
     
+    // Check if someone is already generating a question (prevent race condition)
+    if (room.generatingQuestion) {
+      console.log('⏳ Question generation in progress, waiting...');
+      // Return existing question or wait for generation to complete
+      if (room.currentQuestion && !room.roundEnded) {
+        const now = Date.now();
+        const questionStartTime = room.questionStartTime || now;
+        const elapsedSeconds = Math.floor((now - questionStartTime) / 1000);
+        const remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
+        
+        return res.json({ 
+          success: true, 
+          question: room.currentQuestion,
+          timeLeft: remainingTime,
+          startTime: questionStartTime,
+          showResult: room.roundEnded || remainingTime <= 0
+        });
+      } else {
+        // Wait for generation to complete
+        return res.status(409).json({ success: false, error: 'Question generation in progress, try again' });
+      }
+    }
+    
     // If forcing new question or no existing question, generate new one
     if (forceNew) {
       console.log('🆕 Force new question requested (Next button clicked)');
+    } else {
+      console.log('🆕 Generating first question for room');
     }
+    
+    // Mark that we're generating a question (prevent race conditions)
+    room.generatingQuestion = true;
     
     // Check if someone is already generating a question (prevent race condition)
     if (room.generatingQuestion) {
       console.log('⏳ Question generation in progress, waiting...');
-      // Wait a bit and check again
-      setTimeout(() => {
-        if (room.currentQuestion) {
-          const now = Date.now();
-          const questionStartTime = room.questionStartTime || now;
-          const elapsedSeconds = Math.floor((now - questionStartTime) / 1000);
-          const remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
-          
-          res.json({ 
-            success: true, 
-            question: room.currentQuestion,
-            timeLeft: remainingTime,
-            startTime: questionStartTime
-          });
-        } else {
-          res.json({ success: false, error: 'Failed to generate question' });
-        }
-      }, 100);
-      return;
+      // Return existing question or wait for generation to complete
+      if (room.currentQuestion && !room.roundEnded) {
+        const now = Date.now();
+        const questionStartTime = room.questionStartTime || now;
+        const elapsedSeconds = Math.floor((now - questionStartTime) / 1000);
+        const remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
+        
+        return res.json({ 
+          success: true, 
+          question: room.currentQuestion,
+          timeLeft: remainingTime,
+          startTime: questionStartTime,
+          showResult: room.roundEnded || remainingTime <= 0
+        });
+      } else {
+        // Wait for generation to complete
+        return res.status(409).json({ success: false, error: 'Question generation in progress, try again' });
+      }
     }
     
     // Mark that we're generating a question (prevent race conditions)
