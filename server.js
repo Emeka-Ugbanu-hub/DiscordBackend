@@ -1069,7 +1069,7 @@ app.post('/api/start_question', (req, res) => {
     
     // If not forcing new question and room has existing question, return it
     if (!forceNew && room.currentQuestion && !room.roundEnded) {
-      console.log('📋 Returning existing question for synchronization');
+      console.log('📋 [/api/start_question] Returning existing question for synchronization');
       
       // Calculate remaining time based on when question started
       const now = Date.now();
@@ -1084,6 +1084,28 @@ app.post('/api/start_question', (req, res) => {
         startTime: questionStartTime,
         showResult: room.roundEnded || remainingTime <= 0
       });
+    }
+    
+    // SPECIAL CASE: If forcing new question but a question was just generated very recently,
+    // return the recent question to prevent race conditions from Next button clicks
+    if (forceNew && room.currentQuestion && room.questionStartTime) {
+      const now = Date.now();
+      const timeSinceGeneration = now - room.questionStartTime;
+      
+      // If question was generated less than 3 seconds ago, return it instead of generating new one
+      if (timeSinceGeneration < 3000) {
+        console.log(`🔄 [/api/start_question] ForceNew request but question generated ${timeSinceGeneration}ms ago - returning recent question`);
+        const elapsedSeconds = Math.floor(timeSinceGeneration / 1000);
+        const remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
+        
+        return res.json({ 
+          success: true, 
+          question: room.currentQuestion,
+          timeLeft: remainingTime,
+          startTime: room.questionStartTime,
+          showResult: room.roundEnded || remainingTime <= 0
+        });
+      }
     }
     
     // Check if someone is already generating a question (prevent race condition)
