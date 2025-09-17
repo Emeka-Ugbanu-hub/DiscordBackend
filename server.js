@@ -1171,16 +1171,11 @@ app.post('/api/start_question', (req, res) => {
       console.log('🆕 [/api/start_question] Generating first question for room');
     }
     
-    // Mark that we're generating a question (prevent race conditions)
-    room.generatingQuestion = true;
-    room.lastQuestionGenerated = now;
-    
     // Check if someone is already generating a question (prevent race condition)
     if (room.generatingQuestion) {
-      console.log('⏳ Question generation in progress, waiting...');
+      console.log('⏳ [/api/start_question] Question generation already in progress, waiting...');
       // Return existing question or wait for generation to complete
       if (room.currentQuestion && !room.roundEnded) {
-        const now = Date.now();
         const questionStartTime = room.questionStartTime || now;
         const elapsedSeconds = Math.floor((now - questionStartTime) / 1000);
         const remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
@@ -1200,6 +1195,7 @@ app.post('/api/start_question', (req, res) => {
     
     // Mark that we're generating a question (prevent race conditions)
     room.generatingQuestion = true;
+    room.lastQuestionGenerated = now;
     
     // Generate new question - clear round ended state since we're starting fresh
     const randomQuestion = getRandomQuestion();
