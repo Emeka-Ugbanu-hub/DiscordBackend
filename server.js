@@ -899,6 +899,29 @@ app.get('/api/game-state/:roomId', (req, res) => {
         remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
       }
       
+      // If question has expired (0 seconds left) and results have been shown,
+      // clear it so players get a fresh start when rejoining
+      if (remainingTime <= 0 && room.roundEnded) {
+        console.log('🧹 [game-state] Clearing expired question from room:', roomId);
+        room.currentQuestion = null;
+        room.questionStartTime = null;
+        room.roundEnded = false;
+        room.selections = {};
+        room.gameState = 'waiting';
+        
+        // Return clean state for fresh start
+        res.json({
+          success: true,
+          currentQuestion: null,
+          timeLeft: MAX_TIME,
+          showResult: false,
+          gameState: 'waiting',
+          roundEnded: false,
+          questionStartTime: null
+        });
+        return;
+      }
+      
       console.log('📋 [game-state] Returning existing question for room:', roomId, 'timeLeft:', remainingTime);
       
       res.json({
@@ -959,6 +982,29 @@ app.get('/game-state/:roomId', (req, res) => {
         const now = Date.now();
         const elapsedSeconds = Math.floor((now - room.questionStartTime) / 1000);
         remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
+      }
+      
+      // If question has expired (0 seconds left) and results have been shown,
+      // clear it so players get a fresh start when rejoining
+      if (remainingTime <= 0 && room.roundEnded) {
+        console.log('🧹 [game-state] Clearing expired question from room:', roomId);
+        room.currentQuestion = null;
+        room.questionStartTime = null;
+        room.roundEnded = false;
+        room.selections = {};
+        room.gameState = 'waiting';
+        
+        // Return clean state for fresh start
+        res.json({
+          success: true,
+          currentQuestion: null,
+          timeLeft: MAX_TIME,
+          showResult: false,
+          gameState: 'waiting',
+          roundEnded: false,
+          questionStartTime: null
+        });
+        return;
       }
       
       console.log('📋 [game-state] Returning existing question for room:', roomId, 'timeLeft:', remainingTime);
