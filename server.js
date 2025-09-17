@@ -567,7 +567,6 @@ function getRandomQuestion() {
     question: question.question,
     options: question.options,
     answer: question.answer,
-    isCard: false,
     id: randomIndex
   };
 }
@@ -880,7 +879,7 @@ app.get('/api/game-state/:roomId', (req, res) => {
   try {
     // Ensure room exists (create if needed for HTTP requests)
     if (roomId && !rooms[roomId]) {
-      console.log(`🏠 [game-state] Creating room for request: ${roomId}`);
+      console.log(`🏠 [api/game-state] Creating room for request: ${roomId}`);
       rooms[roomId] = {
         players: {},
         currentQuestion: null,
@@ -906,10 +905,10 @@ app.get('/api/game-state/:roomId', (req, res) => {
         remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
       }
       
-      // If question has expired (0 seconds left) and results have been shown,
-      // clear it so players get a fresh start when rejoining
-      if (remainingTime <= 0 && room.roundEnded) {
-        console.log('🧹 [game-state] Clearing expired question from room:', roomId);
+      // If question has expired (0 seconds left), clear it immediately 
+      // to ensure players get a fresh start
+      if (remainingTime <= 0) {
+        console.log('🧹 [api/game-state] Clearing expired question from room:', roomId, 'roundEnded:', room.roundEnded);
         room.currentQuestion = null;
         room.questionStartTime = null;
         room.roundEnded = false;
@@ -929,7 +928,7 @@ app.get('/api/game-state/:roomId', (req, res) => {
         return;
       }
       
-      console.log('📋 [game-state] Returning existing question for room:', roomId, 'timeLeft:', remainingTime);
+      console.log('📋 [api/game-state] Returning existing question for room:', roomId, 'timeLeft:', remainingTime);
       
       res.json({
         success: true,
@@ -991,10 +990,10 @@ app.get('/game-state/:roomId', (req, res) => {
         remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
       }
       
-      // If question has expired (0 seconds left) and results have been shown,
-      // clear it so players get a fresh start when rejoining
-      if (remainingTime <= 0 && room.roundEnded) {
-        console.log('🧹 [game-state] Clearing expired question from room:', roomId);
+      // If question has expired (0 seconds left), clear it immediately 
+      // to ensure players get a fresh start
+      if (remainingTime <= 0) {
+        console.log('🧹 [game-state] Clearing expired question from room:', roomId, 'roundEnded:', room.roundEnded);
         room.currentQuestion = null;
         room.questionStartTime = null;
         room.roundEnded = false;
