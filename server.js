@@ -1387,6 +1387,97 @@ app.post('/start_question', (req, res) => {
   }
 });
 
+// Sync local question to server when transitioning from local to multiplayer
+app.post('/api/sync_local_question', (req, res) => {
+  const { roomId, question, timeLeft } = req.body;
+  
+  console.log(`🔄 [/api/sync_local_question] Syncing local question to room: ${roomId}`);
+  
+  if (!roomId || !question) {
+    return res.status(400).json({ success: false, error: 'Missing roomId or question' });
+  }
+  
+  try {
+    // Ensure room exists
+    if (!rooms[roomId]) {
+      console.log(`🏠 Creating room for sync_local_question request: ${roomId}`);
+      rooms[roomId] = {
+        players: {},
+        currentQuestion: null,
+        selections: {},
+        hostSocketId: null,
+        timer: null,
+        gameState: 'waiting',
+        startTime: new Date(),
+        lastActive: new Date(),
+        scores: {},
+        playerNames: {},
+        questionHistory: []
+      };
+    }
+    
+    const room = rooms[roomId];
+    
+    // Only sync if the server doesn't already have a question
+    if (!room.currentQuestion) {
+      console.log('📤 Syncing local question to server:', question.isCard ? 'Card Question' : 'Regular Question');
+      
+      // Calculate when the question started based on time left
+      const now = Date.now();
+      const elapsedTime = MAX_TIME - (timeLeft || MAX_TIME);
+      const questionStartTime = now - (elapsedTime * 1000);
+      
+      room.currentQuestion = question;
+      room.gameState = 'playing';
+      room.questionStartTime = questionStartTime;
+      room.roundEnded = false;
+      room.selections = {};
+      
+      // Clear any existing timer and start new one
+      if (room.timer) {
+        clearTimeout(room.timer);
+      }
+      
+      // Set timer to end the round when time runs out
+      if (timeLeft > 0) {
+        room.timer = setTimeout(() => {
+          console.log(`⏰ Room ${roomId} time up via sync`);
+          room.roundEnded = true;
+          room.gameState = 'ended';
+        }, timeLeft * 1000);
+      }
+      
+      console.log('✅ Successfully synced local question to server');
+      return res.json({ 
+        success: true, 
+        message: 'Local question synced to server',
+        question: room.currentQuestion,
+        timeLeft: timeLeft || MAX_TIME
+      });
+    } else {
+      console.log('📋 Server already has a question, returning existing question');
+      
+      // Calculate remaining time
+      const now = Date.now();
+      const questionStartTime = room.questionStartTime || now;
+      const elapsedSeconds = Math.floor((now - questionStartTime) / 1000);
+      const remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
+      
+      return res.json({ 
+        success: true, 
+        message: 'Server already has question',
+        question: room.currentQuestion,
+        timeLeft: remainingTime,
+        hadExisting: true
+      });
+    }
+    
+  } catch (error) {
+    console.error('Sync local question error:', error);
+    res.status(500).json({ error: 'Failed to sync local question' });
+  }
+});
+
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { 
