@@ -533,10 +533,11 @@ const cardNames = [
   "Dane Guns"
 ];
 
-// Helper: Convert card name to image path (send card name so client can generate proper URL)
+// Helper: Convert card name to image path (for client-side)
 const getCardImagePath = (cardName) => {
-  // Just return the card name - let the client handle URL generation
-  return cardName;
+  // Convert spaces to underscores and remove special characters for filename
+  const fileName = cardName.replace(/\s+/g, '_').replace(/[:/]/g, '');
+  return `./assets/cards/${fileName}.png`; // Client will resolve the full URL
 };
 
 // Helper function to pick a random question (including cards)
@@ -547,11 +548,12 @@ function getRandomQuestion() {
   if (pickCard) {
     const idx = Math.floor(Math.random() * cardNames.length);
     const name = cardNames[idx];
-    
+    const url = getCardImagePath(name);
+
     return {
       isCard: true,
       cardName: name,
-      cardUrl: name, // Send the name, client will generate proper URL
+      cardUrl: url,
       id: `card_${idx}`
     };
   }
