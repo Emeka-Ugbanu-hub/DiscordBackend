@@ -1088,7 +1088,7 @@ app.post('/api/start_question', (req, res) => {
     
     // Check if someone is already generating a question (prevent race condition)
     if (room.generatingQuestion) {
-      console.log('⏳ Question generation in progress, waiting...');
+      console.log('⏳ [/api/start_question] Question generation in progress, waiting...');
       // Return existing question or wait for generation to complete
       if (room.currentQuestion && !room.roundEnded) {
         const now = Date.now();
@@ -1109,15 +1109,37 @@ app.post('/api/start_question', (req, res) => {
       }
     }
     
+    // Additional check: prevent rapid successive question generation
+    const now = Date.now();
+    if (room.lastQuestionGenerated && (now - room.lastQuestionGenerated) < 2000) {
+      console.log('🚫 [/api/start_question] Rate limiting: Too soon after last question generation');
+      if (room.currentQuestion) {
+        const questionStartTime = room.questionStartTime || now;
+        const elapsedSeconds = Math.floor((now - questionStartTime) / 1000);
+        const remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
+        
+        return res.json({ 
+          success: true, 
+          question: room.currentQuestion,
+          timeLeft: remainingTime,
+          startTime: questionStartTime,
+          showResult: room.roundEnded || remainingTime <= 0
+        });
+      } else {
+        return res.status(429).json({ success: false, error: 'Rate limited: too many requests' });
+      }
+    }
+    
     // If forcing new question or no existing question, generate new one
     if (forceNew) {
-      console.log('🆕 Force new question requested (Next button clicked)');
+      console.log('🆕 [/api/start_question] Force new question requested (Next button clicked)');
     } else {
-      console.log('🆕 Generating first question for room');
+      console.log('🆕 [/api/start_question] Generating first question for room');
     }
     
     // Mark that we're generating a question (prevent race conditions)
     room.generatingQuestion = true;
+    room.lastQuestionGenerated = now;
     
     // Check if someone is already generating a question (prevent race condition)
     if (room.generatingQuestion) {
@@ -1231,30 +1253,51 @@ app.post('/start_question', (req, res) => {
     
     // Check if someone is already generating a question (prevent race condition)
     if (room.generatingQuestion) {
-      console.log('⏳ Question generation in progress, waiting...');
-      // Wait a bit and check again
-      setTimeout(() => {
-        if (room.currentQuestion) {
-          const now = Date.now();
-          const questionStartTime = room.questionStartTime || now;
-          const elapsedSeconds = Math.floor((now - questionStartTime) / 1000);
-          const remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
-          
-          res.json({ 
-            success: true, 
-            question: room.currentQuestion,
-            timeLeft: remainingTime,
-            startTime: questionStartTime
-          });
-        } else {
-          res.json({ success: false, error: 'Failed to generate question' });
-        }
-      }, 100);
-      return;
+      console.log('⏳ [/start_question] Question generation in progress, waiting...');
+      // Return existing question or wait for generation to complete
+      if (room.currentQuestion && !room.roundEnded) {
+        const now = Date.now();
+        const questionStartTime = room.questionStartTime || now;
+        const elapsedSeconds = Math.floor((now - questionStartTime) / 1000);
+        const remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
+        
+        return res.json({ 
+          success: true, 
+          question: room.currentQuestion,
+          timeLeft: remainingTime,
+          startTime: questionStartTime,
+          showResult: room.roundEnded || remainingTime <= 0
+        });
+      } else {
+        // Wait for generation to complete
+        return res.status(409).json({ success: false, error: 'Question generation in progress, try again' });
+      }
+    }
+    
+    // Additional check: prevent rapid successive question generation
+    const now = Date.now();
+    if (room.lastQuestionGenerated && (now - room.lastQuestionGenerated) < 2000) {
+      console.log('🚫 [/start_question] Rate limiting: Too soon after last question generation');
+      if (room.currentQuestion) {
+        const questionStartTime = room.questionStartTime || now;
+        const elapsedSeconds = Math.floor((now - questionStartTime) / 1000);
+        const remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
+        
+        return res.json({ 
+          success: true, 
+          question: room.currentQuestion,
+          timeLeft: remainingTime,
+          startTime: questionStartTime,
+          showResult: room.roundEnded || remainingTime <= 0
+        });
+      } else {
+        return res.status(429).json({ success: false, error: 'Rate limited: too many requests' });
+      }
     }
     
     // Mark that we're generating a question (prevent race conditions)
     room.generatingQuestion = true;
+    room.lastQuestionGenerated = now;
     
     // Generate new question - clear round ended state since we're starting fresh
     const randomQuestion = getRandomQuestion();
