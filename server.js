@@ -314,6 +314,12 @@ app.post('/api/game-event', (req, res) => {
           room.generatingQuestion = false; // Clear the lock
           
           console.log('🆕 Generated new question for room:', randomQuestionForSocket.isCard ? 'Card Question' : 'Trivia Question');
+          console.log('📄 Question details:', {
+            isCard: randomQuestionForSocket.isCard,
+            cardName: randomQuestionForSocket.cardName,
+            cardUrl: randomQuestionForSocket.cardUrl,
+            questionText: randomQuestionForSocket.question ? randomQuestionForSocket.question.substring(0, 50) + '...' : 'N/A'
+          });
           
           // For HTTP, return the question directly to the client
           res.json({ 
@@ -1095,6 +1101,12 @@ app.post('/api/start_question', (req, res) => {
       // If question was generated less than 3 seconds ago, return it instead of generating new one
       if (timeSinceGeneration < 3000) {
         console.log(`🔄 [/api/start_question] ForceNew request but question generated ${timeSinceGeneration}ms ago - returning recent question`);
+        console.log('📄 Returning question details:', {
+          isCard: room.currentQuestion.isCard,
+          cardName: room.currentQuestion.cardName,
+          cardUrl: room.currentQuestion.cardUrl,
+          questionText: room.currentQuestion.question ? room.currentQuestion.question.substring(0, 50) + '...' : 'N/A'
+        });
         const elapsedSeconds = Math.floor(timeSinceGeneration / 1000);
         const remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
         
