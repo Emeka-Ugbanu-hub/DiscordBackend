@@ -1196,6 +1196,138 @@ app.post('/api/start_question', (req, res) => {
   }
 });
 
+// Fallback start question endpoint (Discord strips /api prefix)
+app.post('/start_question', (req, res) => {
+  const { roomId, forceNew } = req.body;
+  
+  console.log(`🎯 [/start_question] Starting question for room: ${roomId}, forceNew: ${forceNew}`);
+  
+  if (!roomId) {
+    return res.status(400).json({ success: false, error: 'Missing roomId' });
+  }
+  
+  try {
+    // Ensure room exists
+    if (!rooms[roomId]) {
+      console.log(`🏠 Creating room for start_question request: ${roomId}`);
+      rooms[roomId] = {
+        players: {},
+        currentQuestion: null,
+        selections: {},
+        hostSocketId: null,
+        timer: null,
+        gameState: 'waiting',
+        startTime: new Date(),
+        lastActive: new Date(),
+        scores: {},
+        playerNames: {},
+        questionHistory: []
+      };
+    }
+    
+    const room = rooms[roomId];
+    
+    // If not forcing new question and room has existing question, return it
+    if (!forceNew && room.currentQuestion && !room.roundEnded) {
+      console.log('📋 [/start_question] Returning existing question for synchronization');
+      
+      // Calculate remaining time based on when question started
+      const now = Date.now();
+      const questionStartTime = room.questionStartTime || now;
+      const elapsedSeconds = Math.floor((now - questionStartTime) / 1000);
+      const remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
+      
+      return res.json({ 
+        success: true, 
+        question: room.currentQuestion,
+        timeLeft: remainingTime,
+        startTime: questionStartTime,
+        showResult: room.roundEnded || remainingTime <= 0
+      });
+    }
+    
+    // If forcing new question or no existing question, generate new one
+    if (forceNew) {
+      console.log('🆕 [/start_question] Force new question requested (Next button clicked)');
+    }
+    
+    // Check if someone is already generating a question (prevent race condition)
+    if (room.generatingQuestion) {
+      console.log('⏳ [/start_question] Question generation in progress, waiting...');
+      // Return existing question or wait for generation to complete
+      if (room.currentQuestion && !room.roundEnded) {
+        const now = Date.now();
+        const questionStartTime = room.questionStartTime || now;
+        const elapsedSeconds = Math.floor((now - questionStartTime) / 1000);
+        const remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
+        
+        return res.json({ 
+          success: true, 
+          question: room.currentQuestion,
+          timeLeft: remainingTime,
+          startTime: questionStartTime,
+          showResult: room.roundEnded || remainingTime <= 0
+        });
+      } else {
+        // Wait for generation to complete
+        return res.status(409).json({ success: false, error: 'Question generation in progress, try again' });
+      }
+    }
+    
+    // Additional check: prevent rapid successive question generation
+    const now = Date.now();
+    if (room.lastQuestionGenerated && (now - room.lastQuestionGenerated) < 2000) {
+      console.log('🚫 [/start_question] Rate limiting: Too soon after last question generation');
+      if (room.currentQuestion) {
+        const questionStartTime = room.questionStartTime || now;
+        const elapsedSeconds = Math.floor((now - questionStartTime) / 1000);
+        const remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
+        
+        return res.json({ 
+          success: true, 
+          question: room.currentQuestion,
+          timeLeft: remainingTime,
+          startTime: questionStartTime,
+          showResult: room.roundEnded || remainingTime <= 0
+        });
+      } else {
+        return res.status(429).json({ success: false, error: 'Rate limited: too many requests' });
+      }
+    }
+    
+    // Mark that we're generating a question (prevent race conditions)
+    room.generatingQuestion = true;
+    room.lastQuestionGenerated = now;
+    
+    // Generate new question - clear round ended state since we're starting fresh
+    const randomQuestion = getRandomQuestion();
+    const questionStartTime = Date.now();
+    
+    // Update room state with new question
+    room.currentQuestion = randomQuestion;
+    room.questionStartTime = questionStartTime;
+    room.lastActive = new Date();
+    room.gameState = 'playing';
+    room.roundEnded = false; // Reset round ended flag for new question
+    room.currentSelections = {}; // Clear previous selections
+    room.generatingQuestion = false; // Clear the lock
+    
+    console.log('🆕 [/start_question] Generated new question for room:', randomQuestion.isCard ? 'Card Question' : 'Trivia Question');
+    
+    // Return the question directly to the client
+    res.json({ 
+      success: true, 
+      question: randomQuestion,
+      timeLeft: MAX_TIME,
+      startTime: questionStartTime
+    });
+    
+  } catch (error) {
+    console.error('Start question error:', error);
+    res.status(500).json({ error: 'Failed to start question' });
+  }
+});
+
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { 
