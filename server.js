@@ -1286,8 +1286,8 @@ app.post('/start_question', (req, res) => {
       const now = Date.now();
       const timeSinceGeneration = now - room.questionStartTime;
       
-      // If question was generated less than 3 seconds ago, return it instead of generating new one
-      if (timeSinceGeneration < 3000) {
+      // If question was generated less than 5 seconds ago, return it instead of generating new one
+      if (timeSinceGeneration < 5000) {
         console.log(`🔄 [/start_question] ForceNew request but question generated ${timeSinceGeneration}ms ago - returning recent question`);
         console.log('📄 Returning question details:', {
           isCard: room.currentQuestion.isCard,
