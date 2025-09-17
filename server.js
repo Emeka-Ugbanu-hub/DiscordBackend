@@ -567,7 +567,8 @@ function getRandomQuestion() {
     question: question.question,
     options: question.options,
     answer: question.answer,
-    id: randomIndex
+    id: randomIndex,
+    isCard: false
   };
 }
 
