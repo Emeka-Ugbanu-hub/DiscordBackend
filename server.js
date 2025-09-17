@@ -1280,6 +1280,34 @@ app.post('/start_question', (req, res) => {
       });
     }
     
+    // SPECIAL CASE: If forcing new question but a question was just generated very recently,
+    // return the recent question to prevent race conditions from Next button clicks
+    if (forceNew && room.currentQuestion && room.questionStartTime) {
+      const now = Date.now();
+      const timeSinceGeneration = now - room.questionStartTime;
+      
+      // If question was generated less than 3 seconds ago, return it instead of generating new one
+      if (timeSinceGeneration < 3000) {
+        console.log(`🔄 [/start_question] ForceNew request but question generated ${timeSinceGeneration}ms ago - returning recent question`);
+        console.log('📄 Returning question details:', {
+          isCard: room.currentQuestion.isCard,
+          cardName: room.currentQuestion.cardName,
+          cardUrl: room.currentQuestion.cardUrl,
+          questionText: room.currentQuestion.question ? room.currentQuestion.question.substring(0, 50) + '...' : 'N/A'
+        });
+        const elapsedSeconds = Math.floor(timeSinceGeneration / 1000);
+        const remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
+        
+        return res.json({ 
+          success: true, 
+          question: room.currentQuestion,
+          timeLeft: remainingTime,
+          startTime: room.questionStartTime,
+          showResult: room.roundEnded || remainingTime <= 0
+        });
+      }
+    }
+    
     // If forcing new question or no existing question, generate new one
     if (forceNew) {
       console.log('🆕 [/start_question] Force new question requested (Next button clicked)');
