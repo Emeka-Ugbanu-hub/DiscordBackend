@@ -542,8 +542,8 @@ const getCardImagePath = (cardName) => {
 
 // Helper function to pick a random question (including cards)
 function getRandomQuestion() {
-  // 45% chance to pick a HC card "guess the card" style question
-  const pickCard = Math.random() < 0.45 && cardNames.length > 0;
+  // 60% chance to pick a HC card "guess the card" style question (balanced mix)
+  const pickCard = Math.random() < 0.60 && cardNames.length > 0;
 
   if (pickCard) {
     const idx = Math.floor(Math.random() * cardNames.length);
