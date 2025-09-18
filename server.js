@@ -345,13 +345,29 @@ app.post('/api/game-event', (req, res) => {
           
           // Log if this is a changed selection
           const previousSelection = room.currentSelections[data.playerId];
-          const isChange = previousSelection && previousSelection.optionIndex !== data.optionIndex;
+          const isChange = previousSelection && (
+            (data.optionIndex !== undefined && previousSelection.optionIndex !== data.optionIndex) ||
+            (data.cardAnswer !== undefined && previousSelection.cardAnswer !== data.cardAnswer)
+          );
           
-          room.currentSelections[data.playerId] = {
-            optionIndex: data.optionIndex,
+          // Create selection object based on question type
+          const selection = {
             timeTaken: data.timeTaken,
             timestamp: Date.now()
           };
+          
+          if (data.cardAnswer !== undefined) {
+            // Card question answer
+            selection.cardAnswer = data.cardAnswer;
+            selection.isCorrect = data.isCorrect;
+            console.log(`📊 Player ${data.playerId} ${isChange ? 'changed' : 'submitted'} card answer: "${data.cardAnswer}" (${data.isCorrect ? 'correct' : 'incorrect'})`);
+          } else {
+            // Regular trivia question answer
+            selection.optionIndex = data.optionIndex;
+            console.log(`📊 Player ${data.playerId} ${isChange ? 'changed to' : 'selected'} option ${data.optionIndex}`);
+          }
+          
+          room.currentSelections[data.playerId] = selection;
           
           // Store player name for display purposes
           if (data.playerName) {
@@ -360,7 +376,6 @@ app.post('/api/game-event', (req, res) => {
           
           room.lastActive = new Date();
           
-          console.log(`📊 Player ${data.playerId} ${isChange ? 'changed to' : 'selected'} option ${data.optionIndex}`);
           console.log(`📊 Room ${data.roomId} selections:`, Object.keys(room.currentSelections).length);
           
           res.json({ success: true, message: isChange ? 'Selection changed' : 'Selection recorded' });
@@ -398,23 +413,35 @@ app.post('/api/game-event', (req, res) => {
           const currentQuestion = room.currentQuestion;
           
           if (currentQuestion) {
-            console.log('🎯 Scoring round with question:', currentQuestion.question);
-            console.log('🎯 Correct answer:', currentQuestion.answer);
-            console.log('🎯 Options:', currentQuestion.options);
+            if (currentQuestion.isCard) {
+              console.log('🎯 Scoring card question with answer:', currentQuestion.cardName);
+            } else {
+              console.log('🎯 Scoring trivia question:', currentQuestion.question);
+              console.log('🎯 Correct answer:', currentQuestion.answer);
+              console.log('🎯 Options:', currentQuestion.options);
+            }
             
             // Calculate scores based on correct answers and time taken
             Object.entries(roundSelections).forEach(([playerId, selection]) => {
               if (!room.scores) room.scores = {};
               if (!room.scores[playerId]) room.scores[playerId] = 0;
               
-              // Check if answer is correct (assuming answer is a letter like 'A', 'B', etc.)
-              const correctIndex = currentQuestion.options?.findIndex(opt => 
-                opt.startsWith(currentQuestion.answer)
-              );
+              let isCorrect = false;
               
-              console.log(`🎯 Player ${playerId} selected option ${selection.optionIndex}, correct index is ${correctIndex}`);
+              if (currentQuestion.isCard) {
+                // For card questions, check if the player submitted a correct answer
+                isCorrect = selection.isCorrect === true;
+                console.log(`🎯 Card Question - Player ${playerId} answer was ${isCorrect ? 'correct' : 'incorrect'}`);
+              } else {
+                // For trivia questions, check option index against correct answer
+                const correctIndex = currentQuestion.options?.findIndex(opt => 
+                  opt.startsWith(currentQuestion.answer)
+                );
+                isCorrect = selection.optionIndex === correctIndex;
+                console.log(`🎯 Trivia Question - Player ${playerId} selected option ${selection.optionIndex}, correct index is ${correctIndex}`);
+              }
               
-              if (selection.optionIndex === correctIndex) {
+              if (isCorrect) {
                 // Calculate time-based points
                 const points = calculatePointsFromTime(selection.timeTaken);
                 room.scores[playerId] += points;
@@ -432,12 +459,17 @@ app.post('/api/game-event', (req, res) => {
           // Convert selections format for client
           const clientSelections = {};
           Object.entries(roundSelections).forEach(([playerId, selection]) => {
-            clientSelections[playerId] = selection.optionIndex;
+            if (selection.optionIndex !== undefined) {
+              clientSelections[playerId] = selection.optionIndex; // Trivia question
+            } else {
+              clientSelections[playerId] = selection.isCorrect ? 'correct' : 'incorrect'; // Card question
+            }
           });
           
-          // Store results for duplicate requests
+          // Store results for duplicate requests - get correct answer based on question type
+          const correctAnswer = currentQuestion?.isCard ? currentQuestion.cardName : currentQuestion?.answer;
           room.lastSelections = clientSelections;
-          room.lastCorrectAnswer = currentQuestion?.answer;
+          room.lastCorrectAnswer = correctAnswer;
           
           // Send reveal data
           const responseData = {
@@ -447,7 +479,7 @@ app.post('/api/game-event', (req, res) => {
               selections: clientSelections,
               scores: room.scores || {},
               playerNames: room.playerNames || {},
-              correctAnswer: currentQuestion?.answer
+              correctAnswer: correctAnswer
             }
           };
           
@@ -746,13 +778,29 @@ app.post('/game-event', (req, res) => {
           
           // Log if this is a changed selection
           const previousSelection = room.currentSelections[data.playerId];
-          const isChange = previousSelection && previousSelection.optionIndex !== data.optionIndex;
+          const isChange = previousSelection && (
+            (data.optionIndex !== undefined && previousSelection.optionIndex !== data.optionIndex) ||
+            (data.cardAnswer !== undefined && previousSelection.cardAnswer !== data.cardAnswer)
+          );
           
-          room.currentSelections[data.playerId] = {
-            optionIndex: data.optionIndex,
+          // Create selection object based on question type
+          const selection = {
             timeTaken: data.timeTaken,
             timestamp: Date.now()
           };
+          
+          if (data.cardAnswer !== undefined) {
+            // Card question answer
+            selection.cardAnswer = data.cardAnswer;
+            selection.isCorrect = data.isCorrect;
+            console.log(`📊 Player ${data.playerId} ${isChange ? 'changed' : 'submitted'} card answer: "${data.cardAnswer}" (${data.isCorrect ? 'correct' : 'incorrect'})`);
+          } else {
+            // Regular trivia question answer
+            selection.optionIndex = data.optionIndex;
+            console.log(`📊 Player ${data.playerId} ${isChange ? 'changed to' : 'selected'} option ${data.optionIndex}`);
+          }
+          
+          room.currentSelections[data.playerId] = selection;
           
           // Store player name for display purposes
           if (data.playerName) {
@@ -761,7 +809,6 @@ app.post('/game-event', (req, res) => {
           
           room.lastActive = new Date();
           
-          console.log(`📊 Player ${data.playerId} ${isChange ? 'changed to' : 'selected'} option ${data.optionIndex}`);
           console.log(`📊 Room ${data.roomId} selections:`, Object.keys(room.currentSelections).length);
           
           res.json({ success: true, message: isChange ? 'Selection changed' : 'Selection recorded' });
@@ -801,23 +848,35 @@ app.post('/game-event', (req, res) => {
           const currentQuestion = room.currentQuestion;
           
           if (currentQuestion) {
-            console.log('🎯 Scoring round with question:', currentQuestion.question);
-            console.log('🎯 Correct answer:', currentQuestion.answer);
-            console.log('🎯 Options:', currentQuestion.options);
+            if (currentQuestion.isCard) {
+              console.log('🎯 Scoring card question with answer:', currentQuestion.cardName);
+            } else {
+              console.log('🎯 Scoring trivia question:', currentQuestion.question);
+              console.log('🎯 Correct answer:', currentQuestion.answer);
+              console.log('🎯 Options:', currentQuestion.options);
+            }
             
             // Calculate scores based on correct answers and time taken
             Object.entries(roundSelections).forEach(([playerId, selection]) => {
               if (!room.scores) room.scores = {};
               if (!room.scores[playerId]) room.scores[playerId] = 0;
               
-              // Check if answer is correct (assuming answer is a letter like 'A', 'B', etc.)
-              const correctIndex = currentQuestion.options?.findIndex(opt => 
-                opt.startsWith(currentQuestion.answer)
-              );
+              let isCorrect = false;
               
-              console.log(`🎯 Player ${playerId} selected option ${selection.optionIndex}, correct index is ${correctIndex}`);
+              if (currentQuestion.isCard) {
+                // For card questions, check if the player submitted a correct answer
+                isCorrect = selection.isCorrect === true;
+                console.log(`🎯 Card Question - Player ${playerId} answer was ${isCorrect ? 'correct' : 'incorrect'}`);
+              } else {
+                // For trivia questions, check option index against correct answer
+                const correctIndex = currentQuestion.options?.findIndex(opt => 
+                  opt.startsWith(currentQuestion.answer)
+                );
+                isCorrect = selection.optionIndex === correctIndex;
+                console.log(`🎯 Trivia Question - Player ${playerId} selected option ${selection.optionIndex}, correct index is ${correctIndex}`);
+              }
               
-              if (selection.optionIndex === correctIndex) {
+              if (isCorrect) {
                 // Calculate time-based points
                 const points = calculatePointsFromTime(selection.timeTaken);
                 room.scores[playerId] += points;
@@ -835,12 +894,17 @@ app.post('/game-event', (req, res) => {
           // Convert selections format for client
           const clientSelections = {};
           Object.entries(roundSelections).forEach(([playerId, selection]) => {
-            clientSelections[playerId] = selection.optionIndex;
+            if (selection.optionIndex !== undefined) {
+              clientSelections[playerId] = selection.optionIndex; // Trivia question
+            } else {
+              clientSelections[playerId] = selection.isCorrect ? 'correct' : 'incorrect'; // Card question
+            }
           });
           
-          // Store results for duplicate requests
+          // Store results for duplicate requests - get correct answer based on question type
+          const correctAnswer = currentQuestion?.isCard ? currentQuestion.cardName : currentQuestion?.answer;
           room.lastSelections = clientSelections;
-          room.lastCorrectAnswer = currentQuestion?.answer;
+          room.lastCorrectAnswer = correctAnswer;
           
           // Send reveal data
           const responseData = {
@@ -850,7 +914,7 @@ app.post('/game-event', (req, res) => {
               selections: clientSelections,
               scores: room.scores || {},
               playerNames: room.playerNames || {},
-              correctAnswer: currentQuestion?.answer
+              correctAnswer: correctAnswer
             }
           };
           
