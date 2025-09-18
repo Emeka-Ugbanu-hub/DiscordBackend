@@ -980,7 +980,7 @@ app.get('/api/game-state/:roomId', (req, res) => {
       // console.log(`🔄 [api/game-state] Resetting room: ${roomId}`);
       // Clear any existing timer
       if (rooms[roomId].timer) {
-        clearInterval(rooms[roomId].timer);
+        clearTimeout(rooms[roomId].timer);
       }
       // Clear stored scores to prevent restoration
       StorageService.clearCurrentScores(roomId);
