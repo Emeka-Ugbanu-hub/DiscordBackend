@@ -224,6 +224,11 @@ app.post('/api/game-event', (req, res) => {
     // Ensure room exists for HTTP requests (since no Socket.IO connection creates it)
     if (data.roomId && !rooms[data.roomId]) {
       console.log(`🏠 Creating room for HTTP request: ${data.roomId}`);
+      
+      // Restore current day scores if available
+      const savedScores = StorageService.getCurrentScores(data.roomId);
+      console.log(`📊 Restoring ${Object.keys(savedScores).length} saved scores for room: ${data.roomId}`);
+      
       rooms[data.roomId] = {
         players: {},
         currentQuestion: null,
@@ -233,7 +238,7 @@ app.post('/api/game-event', (req, res) => {
         gameState: 'waiting',
         startTime: new Date(),
         lastActive: new Date(),
-        scores: {},
+        scores: savedScores, // Restore saved scores instead of empty object
         playerNames: {}, // Track player names for display
         questionHistory: []
       };
@@ -452,6 +457,9 @@ app.post('/api/game-event', (req, res) => {
             });
             
             console.log('🏆 Final room scores:', room.scores);
+            
+            // Save current scores for persistence across room recreation
+            StorageService.saveCurrentScores(data.roomId, room.scores);
           } else {
             console.log('⚠️ No current question found for scoring');
           }
@@ -614,6 +622,11 @@ app.post('/game-event', (req, res) => {
     // Ensure room exists for HTTP requests (since no Socket.IO connection creates it)
     if (data.roomId && !rooms[data.roomId]) {
       console.log(`🏠 Creating room for HTTP request: ${data.roomId}`);
+      
+      // Restore current day scores if available
+      const savedScores = StorageService.getCurrentScores(data.roomId);
+      console.log(`📊 Restoring ${Object.keys(savedScores).length} saved scores for room: ${data.roomId}`);
+      
       rooms[data.roomId] = {
         players: {},
         currentQuestion: null,
@@ -623,7 +636,7 @@ app.post('/game-event', (req, res) => {
         gameState: 'waiting',
         startTime: new Date(),
         lastActive: new Date(),
-        scores: {},
+        scores: savedScores, // Restore saved scores instead of empty object
         playerNames: {}, // Track player names for display
         questionHistory: []
       };
@@ -887,6 +900,9 @@ app.post('/game-event', (req, res) => {
             });
             
             console.log('🏆 Final room scores:', room.scores);
+            
+            // Save current scores for persistence across room recreation
+            StorageService.saveCurrentScores(data.roomId, room.scores);
           } else {
             console.log('⚠️ No current question found for scoring');
           }
@@ -1734,6 +1750,9 @@ async function resetLeaderboards() {
       room.players[playerId].score = 0;
     });
     room.scores = {};
+    
+    // Clear saved current scores for this room
+    StorageService.clearCurrentScores(channelId);
 
     // Notify room of reset
     io.to(channelId).emit('leaderboard_reset', {

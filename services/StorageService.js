@@ -14,6 +14,7 @@ class StorageService {
     };
 
     this.archives = new Map(); // channelId -> archived scores
+    this.currentScores = new Map(); // channelId -> current day scores
   }
 
   saveLeaderboard(channelId, scores) {
@@ -27,6 +28,21 @@ class StorageService {
       scores,
       timestamp: new Date().toISOString()
     });
+  }
+
+  saveCurrentScores(channelId, scores) {
+    // Save current day scores for restoration when room is recreated
+    this.currentScores.set(channelId, { ...scores });
+  }
+
+  getCurrentScores(channelId) {
+    // Get current day scores for room restoration
+    return this.currentScores.get(channelId) || {};
+  }
+
+  clearCurrentScores(channelId) {
+    // Clear current scores (called during daily reset)
+    this.currentScores.delete(channelId);
   }
 
   getLeaderboardHistory(channelId, days = 7) {
@@ -88,6 +104,9 @@ class StorageService {
       uniquePlayers: new Set(),
       activeChannels: new Set()
     };
+    
+    // Clear all current scores as part of daily reset
+    this.currentScores.clear();
   }
 }
 
