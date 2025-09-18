@@ -1029,13 +1029,13 @@ app.get('/api/game-state/:roomId', (req, res) => {
           });
           return;
         } else {
-          // Time expired but round not yet processed - keep question for scoring
+          // Time expired but round not yet processed - show results for badge display
           // console.log('⏰ [api/game-state] Time expired but keeping question for scoring. Room:', roomId);
           res.json({
             success: true,
             currentQuestion: room.currentQuestion,
             timeLeft: 0,
-            showResult: false,
+            showResult: true, // Show results when time expires for badge display
             gameState: 'active',
             roundEnded: false,
             questionStartTime: room.questionStartTime,
