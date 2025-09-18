@@ -546,33 +546,6 @@ function calculatePointsFromTime(timeTaken) {
   return points;
 }
 
-// Helper function to clean up room state when activity restarts after being inactive
-function cleanupRoomState(room) {
-  if (!room) return;
-  
-  // Clear any existing timers to prevent continued execution
-  if (room.timer) {
-    clearTimeout(room.timer);
-    room.timer = null;
-  }
-  
-  // Reset question state but preserve scores and player names
-  room.currentQuestion = null;
-  room.questionStartTime = null;
-  room.roundEnded = false;
-  room.generatingQuestion = false;
-  room.currentSelections = {};
-  room.lastSelections = {};
-  room.lastCorrectAnswer = null;
-  room.gameState = 'waiting';
-  
-  // Update last active timestamp
-  room.lastActive = new Date();
-  
-  // Preserve scores and playerNames so players can continue where they left off
-  // Don't reset: room.scores, room.playerNames
-}
-
 // Age of Empires III Home City Cards
 const cardNames = [
   "Conquistador", "Team Fencing Instructor", "Unction", "Team Spanish Road", "Team Hidalgos",
@@ -1020,19 +993,6 @@ app.get('/api/game-state/:roomId', (req, res) => {
     }
     
     const room = rooms[roomId];
-    
-    // Clean up room state if it's been inactive for more than 30 seconds
-    // This indicates the Discord activity was likely stopped and restarted
-    if (room && room.lastActive) {
-      const timeSinceLastActive = Date.now() - room.lastActive.getTime();
-      const ACTIVITY_RESTART_THRESHOLD = 30 * 1000; // 30 seconds
-      
-      if (timeSinceLastActive > ACTIVITY_RESTART_THRESHOLD && (room.currentQuestion || room.timer)) {
-        // console.log(`🔄 [api/game-state] Room inactive for ${Math.round(timeSinceLastActive/1000)}s - cleaning up stale state`);
-        cleanupRoomState(room);
-      }
-    }
-    
     if (room && room.currentQuestion) {
       // Calculate remaining time based on when question started
       let remainingTime = MAX_TIME;
@@ -1253,18 +1213,6 @@ app.post('/api/start_question', (req, res) => {
     }
     
     const room = rooms[roomId];
-    
-    // Clean up room state if it's been inactive for more than 30 seconds
-    // This indicates the Discord activity was likely stopped and restarted
-    if (room && room.lastActive) {
-      const timeSinceLastActive = Date.now() - room.lastActive.getTime();
-      const ACTIVITY_RESTART_THRESHOLD = 30 * 1000; // 30 seconds
-      
-      if (timeSinceLastActive > ACTIVITY_RESTART_THRESHOLD && (room.currentQuestion || room.timer)) {
-        // console.log(`🔄 [/api/start_question] Room inactive for ${Math.round(timeSinceLastActive/1000)}s - cleaning up stale state`);
-        cleanupRoomState(room);
-      }
-    }
     
     // If not forcing new question and room has existing question, return it
     if (!forceNew && room.currentQuestion && !room.roundEnded) {
