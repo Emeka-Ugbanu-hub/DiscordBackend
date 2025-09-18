@@ -546,6 +546,33 @@ function calculatePointsFromTime(timeTaken) {
   return points;
 }
 
+// Helper function to clean up room state when activity restarts after being inactive
+function cleanupRoomState(room) {
+  if (!room) return;
+  
+  // Clear any existing timers to prevent continued execution
+  if (room.timer) {
+    clearTimeout(room.timer);
+    room.timer = null;
+  }
+  
+  // Reset question state but preserve scores and player names
+  room.currentQuestion = null;
+  room.questionStartTime = null;
+  room.roundEnded = false;
+  room.generatingQuestion = false;
+  room.currentSelections = {};
+  room.lastSelections = {};
+  room.lastCorrectAnswer = null;
+  room.gameState = 'waiting';
+  
+  // Update last active timestamp
+  room.lastActive = new Date();
+  
+  // Preserve scores and playerNames so players can continue where they left off
+  // Don't reset: room.scores, room.playerNames
+}
+
 // Age of Empires III Home City Cards
 const cardNames = [
   "Conquistador", "Team Fencing Instructor", "Unction", "Team Spanish Road", "Team Hidalgos",
@@ -972,37 +999,8 @@ app.post('/game-event', (req, res) => {
 // Game state endpoint for polling (read-only, doesn't generate questions)
 app.get('/api/game-state/:roomId', (req, res) => {
   const { roomId } = req.params;
-  const { reset } = req.query; // Check for reset parameter
   
   try {
-    // If reset=true, clear the room completely and start fresh
-    if (reset === 'true' && rooms[roomId]) {
-      // console.log(`🔄 [api/game-state] Resetting room: ${roomId}`);
-      // Mark room as reset to prevent any pending timer callbacks
-      rooms[roomId].isReset = true;
-      
-      // Clear any existing timer
-      if (rooms[roomId].timer) {
-        clearTimeout(rooms[roomId].timer);
-      }
-      // Clear stored scores to prevent restoration
-      StorageService.clearCurrentScores(roomId);
-      // Delete the room to force fresh start
-      delete rooms[roomId];
-      
-      // Return immediate response for reset to confirm it happened
-      return res.json({
-        success: true,
-        reset: true,
-        currentQuestion: null,
-        timeLeft: MAX_TIME,
-        showResult: false,
-        selections: {},
-        scores: {},
-        gameState: 'waiting'
-      });
-    }
-    
     // Ensure room exists (create if needed for HTTP requests)
     if (roomId && !rooms[roomId]) {
       // console.log(`🏠 [api/game-state] Creating room for request: ${roomId}`);
@@ -1022,6 +1020,19 @@ app.get('/api/game-state/:roomId', (req, res) => {
     }
     
     const room = rooms[roomId];
+    
+    // Clean up room state if it's been inactive for more than 30 seconds
+    // This indicates the Discord activity was likely stopped and restarted
+    if (room && room.lastActive) {
+      const timeSinceLastActive = Date.now() - room.lastActive.getTime();
+      const ACTIVITY_RESTART_THRESHOLD = 30 * 1000; // 30 seconds
+      
+      if (timeSinceLastActive > ACTIVITY_RESTART_THRESHOLD && (room.currentQuestion || room.timer)) {
+        // console.log(`🔄 [api/game-state] Room inactive for ${Math.round(timeSinceLastActive/1000)}s - cleaning up stale state`);
+        cleanupRoomState(room);
+      }
+    }
+    
     if (room && room.currentQuestion) {
       // Calculate remaining time based on when question started
       let remainingTime = MAX_TIME;
@@ -1242,6 +1253,18 @@ app.post('/api/start_question', (req, res) => {
     }
     
     const room = rooms[roomId];
+    
+    // Clean up room state if it's been inactive for more than 30 seconds
+    // This indicates the Discord activity was likely stopped and restarted
+    if (room && room.lastActive) {
+      const timeSinceLastActive = Date.now() - room.lastActive.getTime();
+      const ACTIVITY_RESTART_THRESHOLD = 30 * 1000; // 30 seconds
+      
+      if (timeSinceLastActive > ACTIVITY_RESTART_THRESHOLD && (room.currentQuestion || room.timer)) {
+        // console.log(`🔄 [/api/start_question] Room inactive for ${Math.round(timeSinceLastActive/1000)}s - cleaning up stale state`);
+        cleanupRoomState(room);
+      }
+    }
     
     // If not forcing new question and room has existing question, return it
     if (!forceNew && room.currentQuestion && !room.roundEnded) {
@@ -1621,10 +1644,6 @@ app.post('/api/sync_local_question', (req, res) => {
       // Set timer to end the round when time runs out
       if (timeLeft > 0) {
         room.timer = setTimeout(() => {
-          // Check if room was reset while timer was pending
-          if (!rooms[roomId] || rooms[roomId].isReset) {
-            return; // Don't execute if room was reset
-          }
           // console.log(`⏰ Room ${roomId} time up via sync`);
           room.roundEnded = true;
           room.gameState = 'ended';
@@ -2007,10 +2026,6 @@ io.on("connection", (socket) => {
     // set timer to finish
     if (room.timer) clearTimeout(room.timer);
     room.timer = setTimeout(() => {
-      // Check if room was reset while timer was pending
-      if (!rooms[channelId] || rooms[channelId].isReset) {
-        return; // Don't execute if room was reset
-      }
       // compute result and broadcast show_result
       computeScores(room);
       room.scores = Object.fromEntries(Object.entries(room.players).map(([id, p]) => [id, p.score || 0]));
