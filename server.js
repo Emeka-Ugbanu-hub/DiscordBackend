@@ -226,10 +226,6 @@ app.post('/api/game-event', (req, res) => {
     if (data.roomId && !rooms[data.roomId]) {
       // console.log(`🏠 Creating room for HTTP request: ${data.roomId}`);
       
-      // Restore current day scores if available
-      const savedScores = StorageService.getCurrentScores(data.roomId);
-      // console.log(`📊 Restoring ${Object.keys(savedScores).length} saved scores for room: ${data.roomId}`);
-      
       rooms[data.roomId] = {
         players: {},
         currentQuestion: null,
@@ -239,7 +235,7 @@ app.post('/api/game-event', (req, res) => {
         gameState: 'waiting',
         startTime: new Date(),
         lastActive: new Date(),
-        scores: savedScores, // Restore saved scores instead of empty object
+        scores: {}, // Start with empty scores - only restore when there's an active game
         playerNames: {}, // Track player names for display
         questionHistory: []
       };
@@ -305,6 +301,17 @@ app.post('/api/game-event', (req, res) => {
           
           // Mark that we're generating a question (prevent race conditions)
           room.generatingQuestion = true;
+          
+          // If forceNew is true (Restart Quiz button), reset all scores
+          if (data.forceNew) {
+            // console.log('🔄 [Socket] Resetting scores for new quiz session');
+            Object.keys(room.players).forEach(playerId => {
+              room.players[playerId].score = 0;
+            });
+            room.scores = {};
+            // Clear saved current scores for this room
+            StorageService.clearCurrentScores(data.roomId);
+          }
           
           // Generate new question - clear round ended state since we're starting fresh
           const randomQuestionForSocket = getRandomQuestion();
@@ -624,10 +631,6 @@ app.post('/game-event', (req, res) => {
     if (data.roomId && !rooms[data.roomId]) {
       // console.log(`🏠 Creating room for HTTP request: ${data.roomId}`);
       
-      // Restore current day scores if available
-      const savedScores = StorageService.getCurrentScores(data.roomId);
-      // console.log(`📊 Restoring ${Object.keys(savedScores).length} saved scores for room: ${data.roomId}`);
-      
       rooms[data.roomId] = {
         players: {},
         currentQuestion: null,
@@ -637,7 +640,7 @@ app.post('/game-event', (req, res) => {
         gameState: 'waiting',
         startTime: new Date(),
         lastActive: new Date(),
-        scores: savedScores, // Restore saved scores instead of empty object
+        scores: {}, // Start with empty scores - only restore when there's an active game
         playerNames: {}, // Track player names for display
         questionHistory: []
       };
@@ -747,6 +750,17 @@ app.post('/game-event', (req, res) => {
               data: questionResponse 
             });
             return;
+          }
+          
+          // If forceNew is true (Restart Quiz button), reset all scores
+          if (data.forceNew) {
+            // console.log('🔄 [Game Event] Resetting scores for new quiz session');
+            Object.keys(room.players).forEach(playerId => {
+              room.players[playerId].score = 0;
+            });
+            room.scores = {};
+            // Clear saved current scores for this room
+            StorageService.clearCurrentScores(data.roomId);
           }
           
           // Generate new question only if no active question or round ended
@@ -1323,6 +1337,17 @@ app.post('/api/start_question', (req, res) => {
     // Mark that we're generating a question (prevent race conditions)
     room.generatingQuestion = true;
     room.lastQuestionGenerated = now;
+    
+    // If forceNew is true (Restart Quiz button), reset all scores
+    if (forceNew) {
+      // console.log('🔄 [/api/start_question] Resetting scores for new quiz session');
+      Object.keys(room.players).forEach(playerId => {
+        room.players[playerId].score = 0;
+      });
+      room.scores = {};
+      // Clear saved current scores for this room
+      StorageService.clearCurrentScores(roomId);
+    }
     
     // Generate new question - clear round ended state since we're starting fresh
     const randomQuestion = getRandomQuestion();
