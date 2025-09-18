@@ -982,8 +982,22 @@ app.get('/api/game-state/:roomId', (req, res) => {
       if (rooms[roomId].timer) {
         clearInterval(rooms[roomId].timer);
       }
+      // Clear stored scores to prevent restoration
+      StorageService.clearCurrentScores(roomId);
       // Delete the room to force fresh start
       delete rooms[roomId];
+      
+      // Return immediate response for reset to confirm it happened
+      return res.json({
+        success: true,
+        reset: true,
+        currentQuestion: null,
+        timeLeft: MAX_TIME,
+        showResult: false,
+        selections: {},
+        scores: {},
+        gameState: 'waiting'
+      });
     }
     
     // Ensure room exists (create if needed for HTTP requests)
