@@ -971,27 +971,43 @@ app.get('/api/game-state/:roomId', (req, res) => {
         remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
       }
       
-      // If question has expired (0 seconds left), clear it immediately 
-      // to ensure players get a fresh start
+      // If question has expired (0 seconds left), only clear it if round has been processed
+      // Don't clear question if there are pending selections that need scoring
       if (remainingTime <= 0) {
-        console.log('🧹 [api/game-state] Clearing expired question from room:', roomId, 'roundEnded:', room.roundEnded);
-        room.currentQuestion = null;
-        room.questionStartTime = null;
-        room.roundEnded = false;
-        room.selections = {};
-        room.gameState = 'waiting';
-        
-        // Return clean state for fresh start
-        res.json({
-          success: true,
-          currentQuestion: null,
-          timeLeft: MAX_TIME,
-          showResult: false,
-          gameState: 'waiting',
-          roundEnded: false,
-          questionStartTime: null
-        });
-        return;
+        // If round has been completed (scored), we can clear everything
+        if (room.roundEnded) {
+          console.log('🧹 [api/game-state] Clearing completed question from room:', roomId);
+          room.currentQuestion = null;
+          room.questionStartTime = null;
+          room.roundEnded = false;
+          room.currentSelections = {};
+          room.gameState = 'waiting';
+          
+          // Return clean state for fresh start
+          res.json({
+            success: true,
+            currentQuestion: null,
+            timeLeft: MAX_TIME,
+            showResult: false,
+            gameState: 'waiting',
+            roundEnded: false,
+            questionStartTime: null
+          });
+          return;
+        } else {
+          // Time expired but round not yet processed - keep question for scoring
+          console.log('⏰ [api/game-state] Time expired but keeping question for scoring. Room:', roomId);
+          res.json({
+            success: true,
+            currentQuestion: room.currentQuestion,
+            timeLeft: 0,
+            showResult: false,
+            gameState: 'active',
+            roundEnded: false,
+            questionStartTime: room.questionStartTime
+          });
+          return;
+        }
       }
       
       console.log('📋 [api/game-state] Returning existing question for room:', roomId, 'timeLeft:', remainingTime);
@@ -1056,27 +1072,43 @@ app.get('/game-state/:roomId', (req, res) => {
         remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
       }
       
-      // If question has expired (0 seconds left), clear it immediately 
-      // to ensure players get a fresh start
+      // If question has expired (0 seconds left), only clear it if round has been processed
+      // Don't clear question if there are pending selections that need scoring
       if (remainingTime <= 0) {
-        console.log('🧹 [game-state] Clearing expired question from room:', roomId, 'roundEnded:', room.roundEnded);
-        room.currentQuestion = null;
-        room.questionStartTime = null;
-        room.roundEnded = false;
-        room.selections = {};
-        room.gameState = 'waiting';
-        
-        // Return clean state for fresh start
-        res.json({
-          success: true,
-          currentQuestion: null,
-          timeLeft: MAX_TIME,
-          showResult: false,
-          gameState: 'waiting',
-          roundEnded: false,
-          questionStartTime: null
-        });
-        return;
+        // If round has been completed (scored), we can clear everything
+        if (room.roundEnded) {
+          console.log('🧹 [game-state] Clearing completed question from room:', roomId);
+          room.currentQuestion = null;
+          room.questionStartTime = null;
+          room.roundEnded = false;
+          room.currentSelections = {};
+          room.gameState = 'waiting';
+          
+          // Return clean state for fresh start
+          res.json({
+            success: true,
+            currentQuestion: null,
+            timeLeft: MAX_TIME,
+            showResult: false,
+            gameState: 'waiting',
+            roundEnded: false,
+            questionStartTime: null
+          });
+          return;
+        } else {
+          // Time expired but round not yet processed - keep question for scoring
+          console.log('⏰ [game-state] Time expired but keeping question for scoring. Room:', roomId);
+          res.json({
+            success: true,
+            currentQuestion: room.currentQuestion,
+            timeLeft: 0,
+            showResult: false,
+            gameState: 'active',
+            roundEnded: false,
+            questionStartTime: room.questionStartTime
+          });
+          return;
+        }
       }
       
       console.log('📋 [game-state] Returning existing question for room:', roomId, 'timeLeft:', remainingTime);
