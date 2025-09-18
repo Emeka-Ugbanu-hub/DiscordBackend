@@ -6,6 +6,7 @@ const { Server } = require("socket.io");
 const questions = require("./questions.json");
 const cors = require("cors");
 const StorageService = require('./services/StorageService');
+const { logger, safeLog } = require('./utils/logger');
 
 const app = express();
 app.use(express.json());
@@ -52,7 +53,7 @@ const analytics = {
 };
 
 if (!CLIENT_ID || !CLIENT_SECRET) {
-  console.error("Missing VITE_DISCORD_CLIENT_ID or CLIENT_SECRET env vars");
+  // console.error("Missing VITE_DISCORD_CLIENT_ID or CLIENT_SECRET env vars");
   process.exit(1);
 }
 
@@ -60,15 +61,15 @@ if (!CLIENT_ID || !CLIENT_SECRET) {
 const fetch = global.fetch;
 
 if (!fetch) {
-  console.error("Global fetch not found — please upgrade Node.js to 18+");
+  // console.error("Global fetch not found — please upgrade Node.js to 18+");
   process.exit(1);
 }
 
 // POST /api/token -- exchange `code` (from embedded SDK) for an access_token
 app.post("/api/token", async (req, res) => {
-  console.log('🔍 /api/token endpoint hit');
-  console.log('Headers:', req.headers);
-  console.log('Body:', req.body);
+  // console.log('🔍 /api/token endpoint hit');
+  // console.log('Headers:', req.headers);
+  // console.log('Body:', req.body);
   
   const { code } = req.body;
   if (!code) return res.status(400).json({ error: "missing code" });
@@ -87,19 +88,19 @@ app.post("/api/token", async (req, res) => {
       body,
     });
     const json = await resp.json();
-    console.log('✅ Discord OAuth response:', json);
+    // console.log('✅ Discord OAuth response:', json);
     return res.json(json); // contains access_token etc
   } catch (err) {
-    console.error("Error fetching token:", err);
+    // console.error("Error fetching token:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
 
 // Fallback endpoint for /token (Discord URL mapping strips /api prefix)
 app.post("/token", async (req, res) => {
-  console.log('🔧 /token endpoint hit (Discord URL mapping stripped /api prefix)');
-  console.log('Headers:', req.headers);
-  console.log('Body:', req.body);
+  // console.log('🔧 /token endpoint hit (Discord URL mapping stripped /api prefix)');
+  // console.log('Headers:', req.headers);
+  // console.log('Body:', req.body);
   
   const { code } = req.body;
   if (!code) return res.status(400).json({ error: "missing code" });
@@ -118,23 +119,23 @@ app.post("/token", async (req, res) => {
       body,
     });
     const json = await resp.json();
-    console.log('✅ Discord OAuth response via /token:', json);
+    // console.log('✅ Discord OAuth response via /token:', json);
     return res.json(json); // contains access_token etc
   } catch (err) {
-    console.error("Error fetching token via /token:", err);
+    // console.error("Error fetching token via /token:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
 
 // Health check endpoint for socket connection
 app.get("/api/health", (req, res) => {
-  console.log('🏥 Health check endpoint hit');
+  // console.log('🏥 Health check endpoint hit');
   res.json({ status: "healthy", server: "quiz-backend", timestamp: new Date().toISOString() });
 });
 
 // Fallback health endpoint (Discord strips /api prefix)
 app.get("/health", (req, res) => {
-  console.log('🏥 Fallback health check endpoint hit (no /api prefix)');
+  // console.log('🏥 Fallback health check endpoint hit (no /api prefix)');
   res.json({ status: "healthy", server: "quiz-backend", timestamp: new Date().toISOString() });
 });
 
@@ -151,7 +152,7 @@ app.get("/api/me", async (req, res) => {
     const user = await resp.json();
     res.json(user);
   } catch (err) {
-    console.error("Error fetching /api/me:", err);
+    // console.error("Error fetching /api/me:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -191,7 +192,7 @@ app.get("/api/analytics", async (req, res) => {
       currentSessions: Object.keys(rooms).length
     });
   } catch (err) {
-    console.error("Error in analytics endpoint:", err);
+    // console.error("Error in analytics endpoint:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -217,17 +218,17 @@ app.get('/api/discord-test', (req, res) => {
 
 // Game event endpoint for HTTP-based communication
 app.post('/api/game-event', (req, res) => {
-  console.log('🎮 [/api/game-event] Received request:', req.body);
+  // console.log('🎮 [/api/game-event] Received request:', req.body);
   const { event, data } = req.body;
   
   try {
     // Ensure room exists for HTTP requests (since no Socket.IO connection creates it)
     if (data.roomId && !rooms[data.roomId]) {
-      console.log(`🏠 Creating room for HTTP request: ${data.roomId}`);
+      // console.log(`🏠 Creating room for HTTP request: ${data.roomId}`);
       
       // Restore current day scores if available
       const savedScores = StorageService.getCurrentScores(data.roomId);
-      console.log(`📊 Restoring ${Object.keys(savedScores).length} saved scores for room: ${data.roomId}`);
+      // console.log(`📊 Restoring ${Object.keys(savedScores).length} saved scores for room: ${data.roomId}`);
       
       rooms[data.roomId] = {
         players: {},
@@ -247,7 +248,7 @@ app.post('/api/game-event', (req, res) => {
     // Handle the same events as socket.io but via HTTP
     switch (event) {
       case 'start_question':
-        console.log(`🎯 [/api/game-event] Starting question for room: ${data.roomId}`);
+        // console.log(`🎯 [/api/game-event] Starting question for room: ${data.roomId}`);
         
         // Check if room exists
         if (data.roomId && rooms[data.roomId]) {
@@ -255,7 +256,7 @@ app.post('/api/game-event', (req, res) => {
           
           // If not forcing new question and room has existing question, return it
           if (!data.forceNew && room.currentQuestion) {
-            console.log('📋 Returning existing question for synchronization (roundEnded:', room.roundEnded, ')');
+            // console.log('📋 Returning existing question for synchronization (roundEnded:', room.roundEnded, ')');
             
             // Calculate remaining time based on when question started
             const now = Date.now();
@@ -275,12 +276,12 @@ app.post('/api/game-event', (req, res) => {
           
           // If forcing new question or no existing question, generate new one
           if (data.forceNew) {
-            console.log('🆕 Force new question requested (Next button clicked)');
+            // console.log('🆕 Force new question requested (Next button clicked)');
           }
           
           // Check if someone is already generating a question (prevent race condition)
           if (room.generatingQuestion) {
-            console.log('⏳ Question generation in progress, waiting...');
+            // console.log('⏳ Question generation in progress, waiting...');
             // Wait a bit and check again
             setTimeout(() => {
               if (room.currentQuestion) {
@@ -318,13 +319,13 @@ app.post('/api/game-event', (req, res) => {
           room.currentSelections = {}; // Clear previous selections
           room.generatingQuestion = false; // Clear the lock
           
-          console.log('🆕 Generated new question for room:', randomQuestionForSocket.isCard ? 'Card Question' : 'Trivia Question');
-          console.log('📄 Question details:', {
-            isCard: randomQuestionForSocket.isCard,
-            cardName: randomQuestionForSocket.cardName,
-            cardUrl: randomQuestionForSocket.cardUrl,
-            questionText: randomQuestionForSocket.question ? randomQuestionForSocket.question.substring(0, 50) + '...' : 'N/A'
-          });
+          // console.log('🆕 Generated new question for room:', randomQuestionForSocket.isCard ? 'Card Question' : 'Trivia Question');
+          // console.log('📄 Question details:', {
+            // isCard: randomQuestionForSocket.isCard,
+            // cardName: randomQuestionForSocket.cardName,
+            // cardUrl: randomQuestionForSocket.cardUrl,
+            // questionText: randomQuestionForSocket.question ? randomQuestionForSocket.question.substring(0, 50) + '...' : 'N/A'
+          // });
           
           // For HTTP, return the question directly to the client
           res.json({ 
@@ -338,7 +339,7 @@ app.post('/api/game-event', (req, res) => {
         break;
       
       case 'select_option':
-        console.log(`🎯 Option selected for room: ${data.roomId}`, data);
+        // console.log(`🎯 Option selected for room: ${data.roomId}`, data);
         // Handle option selection with competitive flow (allow changing selection)
         if (data.roomId && rooms[data.roomId]) {
           const room = rooms[data.roomId];
@@ -365,11 +366,11 @@ app.post('/api/game-event', (req, res) => {
             // Card question answer
             selection.cardAnswer = data.cardAnswer;
             selection.isCorrect = data.isCorrect;
-            console.log(`📊 Player ${data.playerId} ${isChange ? 'changed' : 'submitted'} card answer: "${data.cardAnswer}" (${data.isCorrect ? 'correct' : 'incorrect'})`);
+            // console.log(`📊 Player ${data.playerId} ${isChange ? 'changed' : 'submitted'} card answer: "${data.cardAnswer}" (${data.isCorrect ? 'correct' : 'incorrect'})`);
           } else {
             // Regular trivia question answer
             selection.optionIndex = data.optionIndex;
-            console.log(`📊 Player ${data.playerId} ${isChange ? 'changed to' : 'selected'} option ${data.optionIndex}`);
+            // console.log(`📊 Player ${data.playerId} ${isChange ? 'changed to' : 'selected'} option ${data.optionIndex}`);
           }
           
           room.currentSelections[data.playerId] = selection;
@@ -381,7 +382,7 @@ app.post('/api/game-event', (req, res) => {
           
           room.lastActive = new Date();
           
-          console.log(`📊 Room ${data.roomId} selections:`, Object.keys(room.currentSelections).length);
+          // console.log(`📊 Room ${data.roomId} selections:`, Object.keys(room.currentSelections).length);
           
           res.json({ success: true, message: isChange ? 'Selection changed' : 'Selection recorded' });
           return;
@@ -389,14 +390,14 @@ app.post('/api/game-event', (req, res) => {
         break;
         
       case 'end_round':
-        console.log(`🏁 Ending round for room: ${data.roomId}`);
+        // console.log(`🏁 Ending round for room: ${data.roomId}`);
         // Handle round completion and reveal all selections
         if (data.roomId && rooms[data.roomId]) {
           const room = rooms[data.roomId];
           
           // Prevent duplicate round endings
           if (room.roundEnded) {
-            console.log('⚠️ Round already ended for this room, skipping duplicate request');
+            // console.log('⚠️ Round already ended for this room, skipping duplicate request');
             res.json({ 
               success: true, 
               action: 'round_complete',
@@ -419,11 +420,11 @@ app.post('/api/game-event', (req, res) => {
           
           if (currentQuestion) {
             if (currentQuestion.isCard) {
-              console.log('🎯 Scoring card question with answer:', currentQuestion.cardName);
+              // console.log('🎯 Scoring card question with answer:', currentQuestion.cardName);
             } else {
-              console.log('🎯 Scoring trivia question:', currentQuestion.question);
-              console.log('🎯 Correct answer:', currentQuestion.answer);
-              console.log('🎯 Options:', currentQuestion.options);
+              // console.log('🎯 Scoring trivia question:', currentQuestion.question);
+              // console.log('🎯 Correct answer:', currentQuestion.answer);
+              // console.log('🎯 Options:', currentQuestion.options);
             }
             
             // Calculate scores based on correct answers and time taken
@@ -436,32 +437,32 @@ app.post('/api/game-event', (req, res) => {
               if (currentQuestion.isCard) {
                 // For card questions, check if the player submitted a correct answer
                 isCorrect = selection.isCorrect === true;
-                console.log(`🎯 Card Question - Player ${playerId} answer was ${isCorrect ? 'correct' : 'incorrect'}`);
+                // console.log(`🎯 Card Question - Player ${playerId} answer was ${isCorrect ? 'correct' : 'incorrect'}`);
               } else {
                 // For trivia questions, check option index against correct answer
                 const correctIndex = currentQuestion.options?.findIndex(opt => 
                   opt.startsWith(currentQuestion.answer)
                 );
                 isCorrect = selection.optionIndex === correctIndex;
-                console.log(`🎯 Trivia Question - Player ${playerId} selected option ${selection.optionIndex}, correct index is ${correctIndex}`);
+                // console.log(`🎯 Trivia Question - Player ${playerId} selected option ${selection.optionIndex}, correct index is ${correctIndex}`);
               }
               
               if (isCorrect) {
                 // Calculate time-based points
                 const points = calculatePointsFromTime(selection.timeTaken);
                 room.scores[playerId] += points;
-                console.log(`✅ Player ${playerId} got it right! Time taken: ${selection.timeTaken}s, Points awarded: ${points}, New total: ${room.scores[playerId]}`);
+                // console.log(`✅ Player ${playerId} got it right! Time taken: ${selection.timeTaken}s, Points awarded: ${points}, New total: ${room.scores[playerId]}`);
               } else {
-                console.log(`❌ Player ${playerId} got it wrong. Score stays: ${room.scores[playerId]}`);
+                // console.log(`❌ Player ${playerId} got it wrong. Score stays: ${room.scores[playerId]}`);
               }
             });
             
-            console.log('🏆 Final room scores:', room.scores);
+            // console.log('🏆 Final room scores:', room.scores);
             
             // Save current scores for persistence across room recreation
             StorageService.saveCurrentScores(data.roomId, room.scores);
           } else {
-            console.log('⚠️ No current question found for scoring');
+            // console.log('⚠️ No current question found for scoring');
           }
           
           // Convert selections format for client
@@ -491,14 +492,14 @@ app.post('/api/game-event', (req, res) => {
             }
           };
           
-          console.log('📤 Sending round completion response:', responseData);
+          // console.log('📤 Sending round completion response:', responseData);
           res.json(responseData);
           
           // Clear selections for next round but keep question until next round starts
           room.currentSelections = {};
           // Mark round as ended but don't clear question yet - let next question request handle it
           room.roundEnded = true;
-          console.log('🔄 [/api/game-event] Round marked as completed, ready for next question');
+          // console.log('🔄 [/api/game-event] Round marked as completed, ready for next question');
           return;
         }
         break;
@@ -506,34 +507,34 @@ app.post('/api/game-event', (req, res) => {
     
     res.json({ success: true });
   } catch (error) {
-    console.error('Game event error:', error);
+    // console.error('Game event error:', error);
     res.status(500).json({ error: 'Failed to process game event' });
   }
 });
 
 // Helper function to calculate time-based points (matching client-side logic)
 function calculatePointsFromTime(timeTaken) {
-  console.log(`🔍 calculatePointsFromTime called with: timeTaken=${timeTaken}, type=${typeof timeTaken}`);
+  // console.log(`🔍 calculatePointsFromTime called with: timeTaken=${timeTaken}, type=${typeof timeTaken}`);
   
   if (!timeTaken || timeTaken <= 0) {
-    console.log(`🔍 Returning 0 because timeTaken is invalid: ${timeTaken}`);
+    // console.log(`🔍 Returning 0 because timeTaken is invalid: ${timeTaken}`);
     return 0;
   }
   
   // Calculate time left (MAX_TIME - timeTaken)
   const timeLeft = Math.max(0, MAX_TIME - timeTaken);
-  console.log(`🔍 timeLeft = MAX_TIME(${MAX_TIME}) - timeTaken(${timeTaken}) = ${timeLeft}`);
+  // console.log(`🔍 timeLeft = MAX_TIME(${MAX_TIME}) - timeTaken(${timeTaken}) = ${timeLeft}`);
   
   // Normalize to [0..1] range
   const x = Math.max(0, Math.min(1, timeLeft / MAX_TIME));
-  console.log(`🔍 x = timeLeft(${timeLeft}) / MAX_TIME(${MAX_TIME}) = ${x}`);
+  // console.log(`🔍 x = timeLeft(${timeLeft}) / MAX_TIME(${MAX_TIME}) = ${x}`);
   
   // Apply power curve: f(x) = MAX_POINTS * x^SCORING_EXPONENT
   const raw = MAX_POINTS * Math.pow(x, SCORING_EXPONENT);
-  console.log(`🔍 raw = MAX_POINTS(${MAX_POINTS}) * x(${x})^${SCORING_EXPONENT} = ${raw}`);
+  // console.log(`🔍 raw = MAX_POINTS(${MAX_POINTS}) * x(${x})^${SCORING_EXPONENT} = ${raw}`);
   
   const points = Math.round(raw);
-  console.log(`🔍 Final points = Math.round(${raw}) = ${points}`);
+  // console.log(`🔍 Final points = Math.round(${raw}) = ${points}`);
   
   return points;
 }
@@ -615,17 +616,17 @@ function getRandomQuestion() {
 
 // Fallback game event endpoint (Discord strips /api prefix)
 app.post('/game-event', (req, res) => {
-  console.log('🎮 [/game-event] Fallback endpoint hit:', req.body);
+  // console.log('🎮 [/game-event] Fallback endpoint hit:', req.body);
   const { event, data } = req.body;
   
   try {
     // Ensure room exists for HTTP requests (since no Socket.IO connection creates it)
     if (data.roomId && !rooms[data.roomId]) {
-      console.log(`🏠 Creating room for HTTP request: ${data.roomId}`);
+      // console.log(`🏠 Creating room for HTTP request: ${data.roomId}`);
       
       // Restore current day scores if available
       const savedScores = StorageService.getCurrentScores(data.roomId);
-      console.log(`📊 Restoring ${Object.keys(savedScores).length} saved scores for room: ${data.roomId}`);
+      // console.log(`📊 Restoring ${Object.keys(savedScores).length} saved scores for room: ${data.roomId}`);
       
       rooms[data.roomId] = {
         players: {},
@@ -645,7 +646,7 @@ app.post('/game-event', (req, res) => {
     // Handle the same events as socket.io but via HTTP
     switch (event) {
       case 'start_question':
-        console.log(`🎯 [/game-event] Starting question for room: ${data.roomId}`);
+        // console.log(`🎯 [/game-event] Starting question for room: ${data.roomId}`);
         
         // Check if room exists
         if (data.roomId && rooms[data.roomId]) {
@@ -653,7 +654,7 @@ app.post('/game-event', (req, res) => {
           
           // If not forcing new question and room has existing question, return it
           if (!data.forceNew && room.currentQuestion) {
-            console.log('📋 [/game-event] Returning existing question for synchronization (roundEnded:', room.roundEnded, ')');
+            // console.log('📋 [/game-event] Returning existing question for synchronization (roundEnded:', room.roundEnded, ')');
             
             // Calculate remaining time based on when question started
             const now = Date.now();
@@ -676,12 +677,12 @@ app.post('/game-event', (req, res) => {
           
           // If forcing new question or no existing question, generate new one
           if (data.forceNew) {
-            console.log('🆕 [/game-event] Force new question requested (Next button clicked)');
+            // console.log('🆕 [/game-event] Force new question requested (Next button clicked)');
           }
           
           // Check if someone is already generating a question (prevent race condition)
           if (room.generatingQuestion) {
-            console.log('⏳ Question generation in progress, waiting...');
+            // console.log('⏳ Question generation in progress, waiting...');
             // Wait a bit and check again
             setTimeout(() => {
               if (room.currentQuestion) {
@@ -711,7 +712,7 @@ app.post('/game-event', (req, res) => {
           
           // If room already has an active question and game is in progress, return existing question
           if (room.currentQuestion && room.gameState === 'playing' && !room.roundEnded) {
-            console.log('📋 Returning existing question for synchronization');
+            // console.log('📋 Returning existing question for synchronization');
             const questionResponse = {
               question: room.currentQuestion,
               timeLeft: MAX_TIME,
@@ -727,7 +728,7 @@ app.post('/game-event', (req, res) => {
           
           // If room already has an active question and game is in progress, return existing question
           if (room.currentQuestion && room.gameState === 'playing' && !room.roundEnded) {
-            console.log('📋 Returning existing question for synchronization');
+            // console.log('📋 Returning existing question for synchronization');
             
             // Calculate remaining time based on when question started
             const now = Date.now();
@@ -761,7 +762,7 @@ app.post('/game-event', (req, res) => {
           room.currentSelections = {}; // Clear previous selections
           room.generatingQuestion = false; // Clear the lock
           
-          console.log('🆕 Generated new question for room:', randomQuestion.isCard ? 'Card Question' : 'Trivia Question');
+          // console.log('🆕 Generated new question for room:', randomQuestion.isCard ? 'Card Question' : 'Trivia Question');
           
           const questionResponse = {
             question: randomQuestion,
@@ -779,7 +780,7 @@ app.post('/game-event', (req, res) => {
         break;
       
       case 'select_option':
-        console.log(`🎯 Option selected for room: ${data.roomId}`, data);
+        // console.log(`🎯 Option selected for room: ${data.roomId}`, data);
         // Handle option selection with competitive flow (allow changing selection)
         if (data.roomId && rooms[data.roomId]) {
           const room = rooms[data.roomId];
@@ -806,11 +807,11 @@ app.post('/game-event', (req, res) => {
             // Card question answer
             selection.cardAnswer = data.cardAnswer;
             selection.isCorrect = data.isCorrect;
-            console.log(`📊 Player ${data.playerId} ${isChange ? 'changed' : 'submitted'} card answer: "${data.cardAnswer}" (${data.isCorrect ? 'correct' : 'incorrect'})`);
+            // console.log(`📊 Player ${data.playerId} ${isChange ? 'changed' : 'submitted'} card answer: "${data.cardAnswer}" (${data.isCorrect ? 'correct' : 'incorrect'})`);
           } else {
             // Regular trivia question answer
             selection.optionIndex = data.optionIndex;
-            console.log(`📊 Player ${data.playerId} ${isChange ? 'changed to' : 'selected'} option ${data.optionIndex}`);
+            // console.log(`📊 Player ${data.playerId} ${isChange ? 'changed to' : 'selected'} option ${data.optionIndex}`);
           }
           
           room.currentSelections[data.playerId] = selection;
@@ -822,7 +823,7 @@ app.post('/game-event', (req, res) => {
           
           room.lastActive = new Date();
           
-          console.log(`📊 Room ${data.roomId} selections:`, Object.keys(room.currentSelections).length);
+          // console.log(`📊 Room ${data.roomId} selections:`, Object.keys(room.currentSelections).length);
           
           res.json({ success: true, message: isChange ? 'Selection changed' : 'Selection recorded' });
           return;
@@ -832,14 +833,14 @@ app.post('/game-event', (req, res) => {
         return;
         
       case 'end_round':
-        console.log(`🏁 [/game-event] Ending round for room: ${data.roomId}`);
+        // console.log(`🏁 [/game-event] Ending round for room: ${data.roomId}`);
         // Handle round completion and reveal all selections
         if (data.roomId && rooms[data.roomId]) {
           const room = rooms[data.roomId];
           
           // Prevent duplicate round endings
           if (room.roundEnded) {
-            console.log('⚠️ Round already ended for this room, skipping duplicate request');
+            // console.log('⚠️ Round already ended for this room, skipping duplicate request');
             res.json({ 
               success: true, 
               action: 'round_complete',
@@ -862,11 +863,11 @@ app.post('/game-event', (req, res) => {
           
           if (currentQuestion) {
             if (currentQuestion.isCard) {
-              console.log('🎯 Scoring card question with answer:', currentQuestion.cardName);
+              // console.log('🎯 Scoring card question with answer:', currentQuestion.cardName);
             } else {
-              console.log('🎯 Scoring trivia question:', currentQuestion.question);
-              console.log('🎯 Correct answer:', currentQuestion.answer);
-              console.log('🎯 Options:', currentQuestion.options);
+              // console.log('🎯 Scoring trivia question:', currentQuestion.question);
+              // console.log('🎯 Correct answer:', currentQuestion.answer);
+              // console.log('🎯 Options:', currentQuestion.options);
             }
             
             // Calculate scores based on correct answers and time taken
@@ -879,32 +880,32 @@ app.post('/game-event', (req, res) => {
               if (currentQuestion.isCard) {
                 // For card questions, check if the player submitted a correct answer
                 isCorrect = selection.isCorrect === true;
-                console.log(`🎯 Card Question - Player ${playerId} answer was ${isCorrect ? 'correct' : 'incorrect'}`);
+                // console.log(`🎯 Card Question - Player ${playerId} answer was ${isCorrect ? 'correct' : 'incorrect'}`);
               } else {
                 // For trivia questions, check option index against correct answer
                 const correctIndex = currentQuestion.options?.findIndex(opt => 
                   opt.startsWith(currentQuestion.answer)
                 );
                 isCorrect = selection.optionIndex === correctIndex;
-                console.log(`🎯 Trivia Question - Player ${playerId} selected option ${selection.optionIndex}, correct index is ${correctIndex}`);
+                // console.log(`🎯 Trivia Question - Player ${playerId} selected option ${selection.optionIndex}, correct index is ${correctIndex}`);
               }
               
               if (isCorrect) {
                 // Calculate time-based points
                 const points = calculatePointsFromTime(selection.timeTaken);
                 room.scores[playerId] += points;
-                console.log(`✅ Player ${playerId} got it right! Time taken: ${selection.timeTaken}s, Points awarded: ${points}, New total: ${room.scores[playerId]}`);
+                // console.log(`✅ Player ${playerId} got it right! Time taken: ${selection.timeTaken}s, Points awarded: ${points}, New total: ${room.scores[playerId]}`);
               } else {
-                console.log(`❌ Player ${playerId} got it wrong. Score stays: ${room.scores[playerId]}`);
+                // console.log(`❌ Player ${playerId} got it wrong. Score stays: ${room.scores[playerId]}`);
               }
             });
             
-            console.log('🏆 Final room scores:', room.scores);
+            // console.log('🏆 Final room scores:', room.scores);
             
             // Save current scores for persistence across room recreation
             StorageService.saveCurrentScores(data.roomId, room.scores);
           } else {
-            console.log('⚠️ No current question found for scoring');
+            // console.log('⚠️ No current question found for scoring');
           }
           
           // Convert selections format for client
@@ -934,14 +935,14 @@ app.post('/game-event', (req, res) => {
             }
           };
           
-          console.log('📤 Sending round completion response:', responseData);
+          // console.log('📤 Sending round completion response:', responseData);
           res.json(responseData);
           
           // Clear selections for next round but keep question until next round starts
           room.currentSelections = {};
           // Mark round as ended but don't clear question yet - let next question request handle it
           room.roundEnded = true;
-          console.log('🔄 [/game-event] Round marked as completed, ready for next question');
+          // console.log('🔄 [/game-event] Round marked as completed, ready for next question');
           return;
         }
         break;
@@ -949,7 +950,7 @@ app.post('/game-event', (req, res) => {
     
     res.json({ success: true });
   } catch (error) {
-    console.error('Game event error:', error);
+    // console.error('Game event error:', error);
     res.status(500).json({ error: 'Failed to process game event' });
   }
 });
@@ -961,7 +962,7 @@ app.get('/api/game-state/:roomId', (req, res) => {
   try {
     // Ensure room exists (create if needed for HTTP requests)
     if (roomId && !rooms[roomId]) {
-      console.log(`🏠 [api/game-state] Creating room for request: ${roomId}`);
+      // console.log(`🏠 [api/game-state] Creating room for request: ${roomId}`);
       rooms[roomId] = {
         players: {},
         currentQuestion: null,
@@ -992,7 +993,7 @@ app.get('/api/game-state/:roomId', (req, res) => {
       if (remainingTime <= 0) {
         // If round has been completed (scored), we can clear everything
         if (room.roundEnded) {
-          console.log('🧹 [api/game-state] Clearing completed question from room:', roomId);
+          // console.log('🧹 [api/game-state] Clearing completed question from room:', roomId);
           room.currentQuestion = null;
           room.questionStartTime = null;
           room.roundEnded = false;
@@ -1007,12 +1008,15 @@ app.get('/api/game-state/:roomId', (req, res) => {
             showResult: false,
             gameState: 'waiting',
             roundEnded: false,
-            questionStartTime: null
+            questionStartTime: null,
+            selections: {},
+            scores: room.scores || {},
+            playerNames: room.playerNames || {}
           });
           return;
         } else {
           // Time expired but round not yet processed - keep question for scoring
-          console.log('⏰ [api/game-state] Time expired but keeping question for scoring. Room:', roomId);
+          // console.log('⏰ [api/game-state] Time expired but keeping question for scoring. Room:', roomId);
           res.json({
             success: true,
             currentQuestion: room.currentQuestion,
@@ -1020,13 +1024,16 @@ app.get('/api/game-state/:roomId', (req, res) => {
             showResult: false,
             gameState: 'active',
             roundEnded: false,
-            questionStartTime: room.questionStartTime
+            questionStartTime: room.questionStartTime,
+            selections: room.currentSelections || {},
+            scores: room.scores || {},
+            playerNames: room.playerNames || {}
           });
           return;
         }
       }
       
-      console.log('📋 [api/game-state] Returning existing question for room:', roomId, 'timeLeft:', remainingTime);
+      // console.log('📋 [api/game-state] Returning existing question for room:', roomId, 'timeLeft:', remainingTime);
       
       res.json({
         success: true,
@@ -1035,10 +1042,13 @@ app.get('/api/game-state/:roomId', (req, res) => {
         showResult: room.roundEnded || remainingTime <= 0,
         gameState: room.gameState,
         roundEnded: room.roundEnded,
-        questionStartTime: room.questionStartTime
+        questionStartTime: room.questionStartTime,
+        selections: room.currentSelections || {},
+        scores: room.scores || {},
+        playerNames: room.playerNames || {}
       });
     } else {
-      console.log('📋 [game-state] No current question for room:', roomId);
+      // console.log('📋 [game-state] No current question for room:', roomId);
       res.json({
         success: true,
         currentQuestion: null,
@@ -1046,11 +1056,14 @@ app.get('/api/game-state/:roomId', (req, res) => {
         showResult: false,
         gameState: 'waiting',
         roundEnded: false,
-        questionStartTime: null
+        questionStartTime: null,
+        selections: {},
+        scores: room ? (room.scores || {}) : {},
+        playerNames: room ? (room.playerNames || {}) : {}
       });
     }
   } catch (error) {
-    console.error('Game state error:', error);
+    // console.error('Game state error:', error);
     res.status(500).json({ error: 'Failed to get game state' });
   }
 });
@@ -1062,7 +1075,7 @@ app.get('/game-state/:roomId', (req, res) => {
   try {
     // Ensure room exists (create if needed for HTTP requests)
     if (roomId && !rooms[roomId]) {
-      console.log(`🏠 [game-state] Creating room for request: ${roomId}`);
+      // console.log(`🏠 [game-state] Creating room for request: ${roomId}`);
       rooms[roomId] = {
         players: {},
         currentQuestion: null,
@@ -1093,7 +1106,7 @@ app.get('/game-state/:roomId', (req, res) => {
       if (remainingTime <= 0) {
         // If round has been completed (scored), we can clear everything
         if (room.roundEnded) {
-          console.log('🧹 [game-state] Clearing completed question from room:', roomId);
+          // console.log('🧹 [game-state] Clearing completed question from room:', roomId);
           room.currentQuestion = null;
           room.questionStartTime = null;
           room.roundEnded = false;
@@ -1113,7 +1126,7 @@ app.get('/game-state/:roomId', (req, res) => {
           return;
         } else {
           // Time expired but round not yet processed - keep question for scoring
-          console.log('⏰ [game-state] Time expired but keeping question for scoring. Room:', roomId);
+          // console.log('⏰ [game-state] Time expired but keeping question for scoring. Room:', roomId);
           res.json({
             success: true,
             currentQuestion: room.currentQuestion,
@@ -1127,7 +1140,7 @@ app.get('/game-state/:roomId', (req, res) => {
         }
       }
       
-      console.log('📋 [game-state] Returning existing question for room:', roomId, 'timeLeft:', remainingTime);
+      // console.log('📋 [game-state] Returning existing question for room:', roomId, 'timeLeft:', remainingTime);
       
       res.json({
         success: true,
@@ -1139,7 +1152,7 @@ app.get('/game-state/:roomId', (req, res) => {
         questionStartTime: room.questionStartTime
       });
     } else {
-      console.log('📋 [game-state] No current question for room:', roomId);
+      // console.log('📋 [game-state] No current question for room:', roomId);
       res.json({
         success: true,
         currentQuestion: null,
@@ -1151,7 +1164,7 @@ app.get('/game-state/:roomId', (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Game state error:', error);
+    // console.error('Game state error:', error);
     res.status(500).json({ error: 'Failed to get game state' });
   }
 });
@@ -1160,7 +1173,7 @@ app.get('/game-state/:roomId', (req, res) => {
 app.post('/api/start_question', (req, res) => {
   const { roomId, forceNew } = req.body;
   
-  console.log(`🎯 [/api/start_question] Starting question for room: ${roomId}, forceNew: ${forceNew}`);
+  // console.log(`🎯 [/api/start_question] Starting question for room: ${roomId}, forceNew: ${forceNew}`);
   
   if (!roomId) {
     return res.status(400).json({ success: false, error: 'Missing roomId' });
@@ -1169,7 +1182,7 @@ app.post('/api/start_question', (req, res) => {
   try {
     // Ensure room exists
     if (!rooms[roomId]) {
-      console.log(`🏠 Creating room for start_question request: ${roomId}`);
+      // console.log(`🏠 Creating room for start_question request: ${roomId}`);
       rooms[roomId] = {
         players: {},
         currentQuestion: null,
@@ -1189,7 +1202,7 @@ app.post('/api/start_question', (req, res) => {
     
     // If not forcing new question and room has existing question, return it
     if (!forceNew && room.currentQuestion && !room.roundEnded) {
-      console.log('📋 [/api/start_question] Returning existing question for synchronization');
+      // console.log('📋 [/api/start_question] Returning existing question for synchronization');
       
       // Calculate remaining time based on when question started
       const now = Date.now();
@@ -1214,13 +1227,13 @@ app.post('/api/start_question', (req, res) => {
       
       // If question was generated less than 3 seconds ago, return it instead of generating new one
       if (timeSinceGeneration < 3000) {
-        console.log(`🔄 [/api/start_question] ForceNew request but question generated ${timeSinceGeneration}ms ago - returning recent question`);
-        console.log('📄 Returning question details:', {
-          isCard: room.currentQuestion.isCard,
-          cardName: room.currentQuestion.cardName,
-          cardUrl: room.currentQuestion.cardUrl,
-          questionText: room.currentQuestion.question ? room.currentQuestion.question.substring(0, 50) + '...' : 'N/A'
-        });
+        // console.log(`🔄 [/api/start_question] ForceNew request but question generated ${timeSinceGeneration}ms ago - returning recent question`);
+        // console.log('📄 Returning question details:', {
+          // isCard: room.currentQuestion.isCard,
+          // cardName: room.currentQuestion.cardName,
+          // cardUrl: room.currentQuestion.cardUrl,
+          // questionText: room.currentQuestion.question ? room.currentQuestion.question.substring(0, 50) + '...' : 'N/A'
+        // });
         const elapsedSeconds = Math.floor(timeSinceGeneration / 1000);
         const remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
         
@@ -1236,7 +1249,7 @@ app.post('/api/start_question', (req, res) => {
     
     // Check if someone is already generating a question (prevent race condition)
     if (room.generatingQuestion) {
-      console.log('⏳ [/api/start_question] Question generation in progress, waiting...');
+      // console.log('⏳ [/api/start_question] Question generation in progress, waiting...');
       // Return existing question or wait for generation to complete
       if (room.currentQuestion && !room.roundEnded) {
         const now = Date.now();
@@ -1260,7 +1273,7 @@ app.post('/api/start_question', (req, res) => {
     // Additional check: prevent rapid successive question generation
     const now = Date.now();
     if (room.lastQuestionGenerated && (now - room.lastQuestionGenerated) < 2000) {
-      console.log('🚫 [/api/start_question] Rate limiting: Too soon after last question generation');
+      // console.log('🚫 [/api/start_question] Rate limiting: Too soon after last question generation');
       if (room.currentQuestion) {
         const questionStartTime = room.questionStartTime || now;
         const elapsedSeconds = Math.floor((now - questionStartTime) / 1000);
@@ -1280,14 +1293,14 @@ app.post('/api/start_question', (req, res) => {
     
     // If forcing new question or no existing question, generate new one
     if (forceNew) {
-      console.log('🆕 [/api/start_question] Force new question requested (Next button clicked)');
+      // console.log('🆕 [/api/start_question] Force new question requested (Next button clicked)');
     } else {
-      console.log('🆕 [/api/start_question] Generating first question for room');
+      // console.log('🆕 [/api/start_question] Generating first question for room');
     }
     
     // Check if someone is already generating a question (prevent race condition)
     if (room.generatingQuestion) {
-      console.log('⏳ [/api/start_question] Question generation already in progress, waiting...');
+      // console.log('⏳ [/api/start_question] Question generation already in progress, waiting...');
       // Return existing question or wait for generation to complete
       if (room.currentQuestion && !room.roundEnded) {
         const questionStartTime = room.questionStartTime || now;
@@ -1324,7 +1337,7 @@ app.post('/api/start_question', (req, res) => {
     room.currentSelections = {}; // Clear previous selections
     room.generatingQuestion = false; // Clear the lock
     
-    console.log('🆕 Generated new question for room:', randomQuestion.isCard ? 'Card Question' : 'Trivia Question');
+    // console.log('🆕 Generated new question for room:', randomQuestion.isCard ? 'Card Question' : 'Trivia Question');
     
     // Return the question directly to the client
     res.json({ 
@@ -1335,7 +1348,7 @@ app.post('/api/start_question', (req, res) => {
     });
     
   } catch (error) {
-    console.error('Start question error:', error);
+    // console.error('Start question error:', error);
     res.status(500).json({ error: 'Failed to start question' });
   }
 });
@@ -1344,7 +1357,7 @@ app.post('/api/start_question', (req, res) => {
 app.post('/start_question', (req, res) => {
   const { roomId, forceNew } = req.body;
   
-  console.log(`🎯 [/start_question] Starting question for room: ${roomId}, forceNew: ${forceNew}`);
+  // console.log(`🎯 [/start_question] Starting question for room: ${roomId}, forceNew: ${forceNew}`);
   
   if (!roomId) {
     return res.status(400).json({ success: false, error: 'Missing roomId' });
@@ -1353,7 +1366,7 @@ app.post('/start_question', (req, res) => {
   try {
     // Ensure room exists
     if (!rooms[roomId]) {
-      console.log(`🏠 Creating room for start_question request: ${roomId}`);
+      // console.log(`🏠 Creating room for start_question request: ${roomId}`);
       rooms[roomId] = {
         players: {},
         currentQuestion: null,
@@ -1373,7 +1386,7 @@ app.post('/start_question', (req, res) => {
     
     // If not forcing new question and room has existing question, return it
     if (!forceNew && room.currentQuestion && !room.roundEnded) {
-      console.log('📋 [/start_question] Returning existing question for synchronization');
+      // console.log('📋 [/start_question] Returning existing question for synchronization');
       
       // Calculate remaining time based on when question started
       const now = Date.now();
@@ -1398,13 +1411,13 @@ app.post('/start_question', (req, res) => {
       
       // If question was generated less than 5 seconds ago, return it instead of generating new one
       if (timeSinceGeneration < 5000) {
-        console.log(`🔄 [/start_question] ForceNew request but question generated ${timeSinceGeneration}ms ago - returning recent question`);
-        console.log('📄 Returning question details:', {
-          isCard: room.currentQuestion.isCard,
-          cardName: room.currentQuestion.cardName,
-          cardUrl: room.currentQuestion.cardUrl,
-          questionText: room.currentQuestion.question ? room.currentQuestion.question.substring(0, 50) + '...' : 'N/A'
-        });
+        // console.log(`🔄 [/start_question] ForceNew request but question generated ${timeSinceGeneration}ms ago - returning recent question`);
+        // console.log('📄 Returning question details:', {
+          // isCard: room.currentQuestion.isCard,
+          // cardName: room.currentQuestion.cardName,
+          // cardUrl: room.currentQuestion.cardUrl,
+          // questionText: room.currentQuestion.question ? room.currentQuestion.question.substring(0, 50) + '...' : 'N/A'
+        // });
         const elapsedSeconds = Math.floor(timeSinceGeneration / 1000);
         const remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
         
@@ -1420,12 +1433,12 @@ app.post('/start_question', (req, res) => {
     
     // If forcing new question or no existing question, generate new one
     if (forceNew) {
-      console.log('🆕 [/start_question] Force new question requested (Next button clicked)');
+      // console.log('🆕 [/start_question] Force new question requested (Next button clicked)');
     }
     
     // Check if someone is already generating a question (prevent race condition)
     if (room.generatingQuestion) {
-      console.log('⏳ [/start_question] Question generation in progress, waiting...');
+      // console.log('⏳ [/start_question] Question generation in progress, waiting...');
       // Return existing question or wait for generation to complete
       if (room.currentQuestion && !room.roundEnded) {
         const now = Date.now();
@@ -1449,7 +1462,7 @@ app.post('/start_question', (req, res) => {
     // Additional check: prevent rapid successive question generation
     const now = Date.now();
     if (room.lastQuestionGenerated && (now - room.lastQuestionGenerated) < 2000) {
-      console.log('🚫 [/start_question] Rate limiting: Too soon after last question generation');
+      // console.log('🚫 [/start_question] Rate limiting: Too soon after last question generation');
       if (room.currentQuestion) {
         const questionStartTime = room.questionStartTime || now;
         const elapsedSeconds = Math.floor((now - questionStartTime) / 1000);
@@ -1484,7 +1497,7 @@ app.post('/start_question', (req, res) => {
     room.currentSelections = {}; // Clear previous selections
     room.generatingQuestion = false; // Clear the lock
     
-    console.log('🆕 [/start_question] Generated new question for room:', randomQuestion.isCard ? 'Card Question' : 'Trivia Question');
+    // console.log('🆕 [/start_question] Generated new question for room:', randomQuestion.isCard ? 'Card Question' : 'Trivia Question');
     
     // Return the question directly to the client
     res.json({ 
@@ -1495,7 +1508,7 @@ app.post('/start_question', (req, res) => {
     });
     
   } catch (error) {
-    console.error('Start question error:', error);
+    // console.error('Start question error:', error);
     res.status(500).json({ error: 'Failed to start question' });
   }
 });
@@ -1504,7 +1517,7 @@ app.post('/start_question', (req, res) => {
 app.post('/api/sync_local_question', (req, res) => {
   const { roomId, question, timeLeft } = req.body;
   
-  console.log(`🔄 [/api/sync_local_question] Syncing local question to room: ${roomId}`);
+  // console.log(`🔄 [/api/sync_local_question] Syncing local question to room: ${roomId}`);
   
   if (!roomId || !question) {
     return res.status(400).json({ success: false, error: 'Missing roomId or question' });
@@ -1513,7 +1526,7 @@ app.post('/api/sync_local_question', (req, res) => {
   try {
     // Ensure room exists
     if (!rooms[roomId]) {
-      console.log(`🏠 Creating room for sync_local_question request: ${roomId}`);
+      // console.log(`🏠 Creating room for sync_local_question request: ${roomId}`);
       rooms[roomId] = {
         players: {},
         currentQuestion: null,
@@ -1533,7 +1546,7 @@ app.post('/api/sync_local_question', (req, res) => {
     
     // Only sync if the server doesn't already have a question
     if (!room.currentQuestion) {
-      console.log('📤 Syncing local question to server:', question.isCard ? 'Card Question' : 'Regular Question');
+      // console.log('📤 Syncing local question to server:', question.isCard ? 'Card Question' : 'Regular Question');
       
       // Calculate when the question started based on time left
       const now = Date.now();
@@ -1554,13 +1567,13 @@ app.post('/api/sync_local_question', (req, res) => {
       // Set timer to end the round when time runs out
       if (timeLeft > 0) {
         room.timer = setTimeout(() => {
-          console.log(`⏰ Room ${roomId} time up via sync`);
+          // console.log(`⏰ Room ${roomId} time up via sync`);
           room.roundEnded = true;
           room.gameState = 'ended';
         }, timeLeft * 1000);
       }
       
-      console.log('✅ Successfully synced local question to server');
+      // console.log('✅ Successfully synced local question to server');
       return res.json({ 
         success: true, 
         message: 'Local question synced to server',
@@ -1568,7 +1581,7 @@ app.post('/api/sync_local_question', (req, res) => {
         timeLeft: timeLeft || MAX_TIME
       });
     } else {
-      console.log('📋 Server already has a question, returning existing question');
+      // console.log('📋 Server already has a question, returning existing question');
       
       // Calculate remaining time
       const now = Date.now();
@@ -1586,7 +1599,7 @@ app.post('/api/sync_local_question', (req, res) => {
     }
     
   } catch (error) {
-    console.error('Sync local question error:', error);
+    // console.error('Sync local question error:', error);
     res.status(500).json({ error: 'Failed to sync local question' });
   }
 });
@@ -1653,7 +1666,7 @@ io.use(async (socket, next) => {
     
     return next();
   } catch (err) {
-    console.error('Socket authentication error:', err);
+    // console.error('Socket authentication error:', err);
     return next(new Error("Auth error"));
   }
 });
@@ -1683,7 +1696,7 @@ function cleanupInactiveRooms() {
       }
       // Remove the room
       delete rooms[channelId];
-      console.log(`Cleaned up inactive room ${channelId}`);
+      // console.log(`Cleaned up inactive room ${channelId}`);
     }
   });
 }
@@ -1708,12 +1721,12 @@ function scheduleNextReset() {
     scheduleNextReset(); // Schedule next reset
   }, timeUntilReset);
 
-  console.log(`Next leaderboard reset scheduled for ${nextReset.toISOString()}`);
+  // console.log(`Next leaderboard reset scheduled for ${nextReset.toISOString()}`);
 }
 
 // Reset all leaderboards
 async function resetLeaderboards() {
-  console.log('Performing daily leaderboard reset');
+  // console.log('Performing daily leaderboard reset');
   
   // Archive current scores if needed
   const archive = {
@@ -1782,7 +1795,7 @@ async function resetLeaderboards() {
   };
 
   // You could store the archive in a database here
-  console.log('Leaderboard reset complete');
+  // console.log('Leaderboard reset complete');
 }
 
 // Start the reset schedule
@@ -2052,5 +2065,5 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 server.listen(PORT, () => {
-  console.log("Server listening on", PORT);
+  // console.log("Server listening on", PORT);
 });
