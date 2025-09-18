@@ -535,9 +535,10 @@ const cardNames = [
 
 // Helper: Convert card name to image path (for client-side)
 const getCardImagePath = (cardName) => {
-  // Convert spaces to underscores and remove special characters for filename
+  // Convert spaces to underscores and remove special characters for filename  
   const fileName = cardName.replace(/\s+/g, '_').replace(/[:/]/g, '');
-  return `./assets/cards/${fileName}.png`; // Client will resolve the full URL
+  // Return path that client can dynamically import
+  return `cards/${fileName}.png`;
 };
 
 // Helper function to pick a random question (including cards)
