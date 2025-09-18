@@ -978,6 +978,9 @@ app.get('/api/game-state/:roomId', (req, res) => {
     // If reset=true, clear the room completely and start fresh
     if (reset === 'true' && rooms[roomId]) {
       // console.log(`🔄 [api/game-state] Resetting room: ${roomId}`);
+      // Mark room as reset to prevent any pending timer callbacks
+      rooms[roomId].isReset = true;
+      
       // Clear any existing timer
       if (rooms[roomId].timer) {
         clearTimeout(rooms[roomId].timer);
@@ -1618,6 +1621,10 @@ app.post('/api/sync_local_question', (req, res) => {
       // Set timer to end the round when time runs out
       if (timeLeft > 0) {
         room.timer = setTimeout(() => {
+          // Check if room was reset while timer was pending
+          if (!rooms[roomId] || rooms[roomId].isReset) {
+            return; // Don't execute if room was reset
+          }
           // console.log(`⏰ Room ${roomId} time up via sync`);
           room.roundEnded = true;
           room.gameState = 'ended';
@@ -2000,6 +2007,10 @@ io.on("connection", (socket) => {
     // set timer to finish
     if (room.timer) clearTimeout(room.timer);
     room.timer = setTimeout(() => {
+      // Check if room was reset while timer was pending
+      if (!rooms[channelId] || rooms[channelId].isReset) {
+        return; // Don't execute if room was reset
+      }
       // compute result and broadcast show_result
       computeScores(room);
       room.scores = Object.fromEntries(Object.entries(room.players).map(([id, p]) => [id, p.score || 0]));
