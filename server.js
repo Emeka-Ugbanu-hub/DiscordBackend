@@ -972,8 +972,20 @@ app.post('/game-event', (req, res) => {
 // Game state endpoint for polling (read-only, doesn't generate questions)
 app.get('/api/game-state/:roomId', (req, res) => {
   const { roomId } = req.params;
+  const { reset } = req.query; // Check for reset parameter
   
   try {
+    // If reset=true, clear the room completely and start fresh
+    if (reset === 'true' && rooms[roomId]) {
+      // console.log(`🔄 [api/game-state] Resetting room: ${roomId}`);
+      // Clear any existing timer
+      if (rooms[roomId].timer) {
+        clearInterval(rooms[roomId].timer);
+      }
+      // Delete the room to force fresh start
+      delete rooms[roomId];
+    }
+    
     // Ensure room exists (create if needed for HTTP requests)
     if (roomId && !rooms[roomId]) {
       // console.log(`🏠 [api/game-state] Creating room for request: ${roomId}`);
