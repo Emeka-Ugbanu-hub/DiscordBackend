@@ -1011,11 +1011,10 @@ app.get('/api/game-state/:roomId', (req, res) => {
           room.currentQuestion = null;
           room.questionStartTime = null;
           room.roundEnded = false;
-          // DON'T clear currentSelections here - keep them for reveal badges
-          // room.currentSelections = {};
+          room.currentSelections = {};
           room.gameState = 'waiting';
           
-          // Return clean state for fresh start but KEEP selections for reveal badges
+          // Return clean state for fresh start
           res.json({
             success: true,
             currentQuestion: null,
@@ -1024,7 +1023,7 @@ app.get('/api/game-state/:roomId', (req, res) => {
             gameState: 'waiting',
             roundEnded: false,
             questionStartTime: null,
-            selections: room.currentSelections || {}, // Keep selections for late joiners
+            selections: {},
             scores: room.scores || {},
             playerNames: room.playerNames || {}
           });
