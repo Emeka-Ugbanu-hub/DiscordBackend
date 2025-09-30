@@ -611,12 +611,12 @@ function getRandomQuestion() {
   const randomIndex = Math.floor(Math.random() * questions.length);
   const question = questions[randomIndex];
   
-  // Return question in the same format as the JSON file
+  // Return question in the same format as the JSON file with consistent string ID
   return {
     question: question.question,
     options: question.options,
     answer: question.answer,
-    id: randomIndex,
+    id: `trivia_${randomIndex}`,
     isCard: false
   };
 }
