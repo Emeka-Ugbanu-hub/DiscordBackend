@@ -388,6 +388,9 @@ app.post('/api/game-event', (req, res) => {
           // Store player name for display purposes
           if (data.playerName) {
             room.playerNames[data.playerId] = data.playerName;
+            console.log(`👤 [/api/game-event] Stored player name: ${data.playerId} -> "${data.playerName}"`);
+          } else {
+            console.log(`⚠️ [/api/game-event] No playerName provided for player: ${data.playerId}`);
           }
           
           room.lastActive = new Date();
@@ -502,7 +505,7 @@ app.post('/api/game-event', (req, res) => {
             }
           };
           
-          // console.log('📤 Sending round completion response:', responseData);
+          console.log('📤 [/api/game-event] Sending round completion with playerNames:', room.playerNames);
           res.json(responseData);
           
           // Clear selections for next round but keep question until next round starts
@@ -953,7 +956,7 @@ app.post('/game-event', (req, res) => {
             }
           };
           
-          // console.log('📤 Sending round completion response:', responseData);
+          console.log('📤 [/game-event] Sending round completion with playerNames:', room.playerNames);
           res.json(responseData);
           
           // Clear selections for next round but keep question until next round starts
