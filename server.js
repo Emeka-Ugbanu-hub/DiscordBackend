@@ -327,13 +327,15 @@ app.post('/api/game-event', (req, res) => {
           room.resultShowStartTime = null; // Clear result show timer for new question
           room.generatingQuestion = false; // Clear the lock
           
-          // console.log('🆕 Generated new question for room:', randomQuestionForSocket.isCard ? 'Card Question' : 'Trivia Question');
-          // console.log('📄 Question details:', {
-            // isCard: randomQuestionForSocket.isCard,
-            // cardName: randomQuestionForSocket.cardName,
-            // cardUrl: randomQuestionForSocket.cardUrl,
-            // questionText: randomQuestionForSocket.question ? randomQuestionForSocket.question.substring(0, 50) + '...' : 'N/A'
-          // });
+          console.log('🆕 Generated new question for room:', randomQuestionForSocket.isCard ? 'Card Question' : 'Trivia Question');
+          console.log('📄 Question details:', {
+            id: randomQuestionForSocket.id,
+            isCard: randomQuestionForSocket.isCard,
+            cardName: randomQuestionForSocket.cardName,
+            cardUrl: randomQuestionForSocket.cardUrl,
+            questionText: randomQuestionForSocket.question ? randomQuestionForSocket.question.substring(0, 50) + '...' : 'N/A'
+          });
+          console.log('🕒 Generated at timestamp:', new Date().toISOString());
           
           // For HTTP, return the question directly to the client
           res.json({ 
@@ -1131,29 +1133,22 @@ app.get('/game-state/:roomId', (req, res) => {
           const resultElapsed = Date.now() - room.resultShowStartTime;
           
           if (resultElapsed >= resultShowDuration) {
-            // Grace period expired - clear everything for fresh start
-            // console.log('🧹 [game-state] Grace period expired, clearing completed question from room:', roomId);
-            room.currentQuestion = null;
-            room.questionStartTime = null;
-            room.roundEnded = false;
-            room.currentSelections = {};
-            room.gameState = 'waiting';
-            room.resultShowStartTime = null;
-            
-            // Return clean state for fresh start
+            // Grace period expired but DON'T auto-clear - wait for explicit new question request
+            // This prevents rapid polling from causing question clearing loops
+            console.log('⏰ [game-state] Grace period expired but keeping question stable. Room:', roomId, 'elapsed:', resultElapsed);
             res.json({
               success: true,
-              currentQuestion: null,
-              timeLeft: MAX_TIME,
-              showResult: false,
-              gameState: 'waiting',
-              roundEnded: false,
-              questionStartTime: null
+              currentQuestion: room.currentQuestion,
+              timeLeft: 0,
+              showResult: true,
+              gameState: 'waiting', // Signal that new question can be requested
+              roundEnded: true,
+              questionStartTime: room.questionStartTime
             });
             return;
           } else {
             // Still in grace period - keep question visible with results
-            // console.log('📊 [game-state] Showing results during grace period. Room:', roomId, 'elapsed:', resultElapsed);
+            console.log('📊 [game-state] Showing results during grace period. Room:', roomId, 'elapsed:', resultElapsed, 'questionID:', room.currentQuestion?.id);
             res.json({
               success: true,
               currentQuestion: room.currentQuestion,
@@ -1181,7 +1176,7 @@ app.get('/game-state/:roomId', (req, res) => {
         }
       }
       
-      // console.log('📋 [game-state] Returning existing question for room:', roomId, 'timeLeft:', remainingTime);
+      console.log('📋 [game-state] Returning existing question for room:', roomId, 'timeLeft:', remainingTime, 'questionID:', room.currentQuestion?.id);
       
       res.json({
         success: true,
@@ -1621,7 +1616,7 @@ app.post('/api/sync_local_question', (req, res) => {
       // Set timer to end the round when time runs out
       if (timeLeft > 0) {
         room.timer = setTimeout(() => {
-          // console.log(`⏰ Room ${roomId} time up via sync`);
+          console.log(`⏰ Room ${roomId} time up via sync - setting roundEnded=true for question:`, room.currentQuestion?.id);
           room.roundEnded = true;
           room.gameState = 'ended';
         }, timeLeft * 1000);
