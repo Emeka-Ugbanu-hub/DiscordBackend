@@ -1141,7 +1141,7 @@ app.get('/game-state/:roomId', (req, res) => {
               currentQuestion: room.currentQuestion,
               timeLeft: 0,
               showResult: true,
-              gameState: 'waiting', // Signal that new question can be requested
+              gameState: 'results', // Keep consistent state to prevent client confusion
               roundEnded: true,
               questionStartTime: room.questionStartTime
             });
