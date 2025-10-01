@@ -324,6 +324,7 @@ app.post('/api/game-event', (req, res) => {
           room.gameState = 'playing';
           room.roundEnded = false; // Reset round ended flag for new question
           room.currentSelections = {}; // Clear previous selections
+          room.resultShowStartTime = null; // Clear result show timer for new question
           room.generatingQuestion = false; // Clear the lock
           
           // console.log('🆕 Generated new question for room:', randomQuestionForSocket.isCard ? 'Card Question' : 'Trivia Question');
@@ -774,6 +775,7 @@ app.post('/game-event', (req, res) => {
           room.gameState = 'playing';
           room.roundEnded = false;
           room.currentSelections = {}; // Clear previous selections
+          room.resultShowStartTime = null; // Clear result show timer for new question
           room.generatingQuestion = false; // Clear the lock
           
           // console.log('🆕 Generated new question for room:', randomQuestion.isCard ? 'Card Question' : 'Trivia Question');
@@ -1118,26 +1120,51 @@ app.get('/game-state/:roomId', (req, res) => {
       // If question has expired (0 seconds left), only clear it if round has been processed
       // Don't clear question if there are pending selections that need scoring
       if (remainingTime <= 0) {
-        // If round has been completed (scored), we can clear everything
+        // If round has been completed (scored), show results for 5 seconds before clearing
         if (room.roundEnded) {
-          // console.log('🧹 [game-state] Clearing completed question from room:', roomId);
-          room.currentQuestion = null;
-          room.questionStartTime = null;
-          room.roundEnded = false;
-          room.currentSelections = {};
-          room.gameState = 'waiting';
+          // Add grace period after round ends to show results
+          if (!room.resultShowStartTime) {
+            room.resultShowStartTime = Date.now();
+          }
           
-          // Return clean state for fresh start
-          res.json({
-            success: true,
-            currentQuestion: null,
-            timeLeft: MAX_TIME,
-            showResult: false,
-            gameState: 'waiting',
-            roundEnded: false,
-            questionStartTime: null
-          });
-          return;
+          const resultShowDuration = 5000; // 5 seconds to show results
+          const resultElapsed = Date.now() - room.resultShowStartTime;
+          
+          if (resultElapsed >= resultShowDuration) {
+            // Grace period expired - clear everything for fresh start
+            // console.log('🧹 [game-state] Grace period expired, clearing completed question from room:', roomId);
+            room.currentQuestion = null;
+            room.questionStartTime = null;
+            room.roundEnded = false;
+            room.currentSelections = {};
+            room.gameState = 'waiting';
+            room.resultShowStartTime = null;
+            
+            // Return clean state for fresh start
+            res.json({
+              success: true,
+              currentQuestion: null,
+              timeLeft: MAX_TIME,
+              showResult: false,
+              gameState: 'waiting',
+              roundEnded: false,
+              questionStartTime: null
+            });
+            return;
+          } else {
+            // Still in grace period - keep question visible with results
+            // console.log('📊 [game-state] Showing results during grace period. Room:', roomId, 'elapsed:', resultElapsed);
+            res.json({
+              success: true,
+              currentQuestion: room.currentQuestion,
+              timeLeft: 0,
+              showResult: true,
+              gameState: 'results',
+              roundEnded: true,
+              questionStartTime: room.questionStartTime
+            });
+            return;
+          }
         } else {
           // Time expired but round not yet processed - keep question for scoring
           // console.log('⏰ [game-state] Time expired but keeping question for scoring. Room:', roomId);
@@ -1360,6 +1387,7 @@ app.post('/api/start_question', (req, res) => {
     room.gameState = 'playing';
     room.roundEnded = false; // Reset round ended flag for new question
     room.currentSelections = {}; // Clear previous selections
+    room.resultShowStartTime = null; // Clear result show timer for new question
     room.generatingQuestion = false; // Clear the lock
     
     // console.log('🆕 Generated new question for room:', randomQuestion.isCard ? 'Card Question' : 'Trivia Question');
@@ -1520,6 +1548,7 @@ app.post('/start_question', (req, res) => {
     room.gameState = 'playing';
     room.roundEnded = false; // Reset round ended flag for new question
     room.currentSelections = {}; // Clear previous selections
+    room.resultShowStartTime = null; // Clear result show timer for new question
     room.generatingQuestion = false; // Clear the lock
     
     // console.log('🆕 [/start_question] Generated new question for room:', randomQuestion.isCard ? 'Card Question' : 'Trivia Question');
