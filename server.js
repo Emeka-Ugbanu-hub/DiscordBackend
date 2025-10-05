@@ -32,8 +32,8 @@ const MAX_TIME = 15;
 const MAX_POINTS = 150; // points for an instant (maximum)
 const SCORING_EXPONENT = 2; // power curve exponent for time-based scoring
 
-const ROOM_CLEANUP_INTERVAL = 1000 * 60 * 30; // 30 minutes
-const ROOM_INACTIVE_THRESHOLD = 1000 * 60 * 60; // 1 hour
+const ROOM_CLEANUP_INTERVAL = 1000 * 60 * 5; // 5 minutes (more frequent cleanup)
+const ROOM_INACTIVE_THRESHOLD = 1000 * 60 * 15; // 15 minutes (shorter threshold for fresh starts)
 
 // Daily reset configuration
 const LEADERBOARD_RESET_HOUR = 0; // Reset at midnight UTC
@@ -468,6 +468,7 @@ app.post('/api/game-event', (req, res) => {
               } else {
                 // console.log(`❌ Player ${playerId} got it wrong. Score stays: ${room.scores[playerId]}`);
               }
+
             });
             
             // console.log('🏆 Final room scores:', room.scores);
@@ -1739,18 +1740,32 @@ function pickRandomQuestion(room) {
 // Clean up inactive rooms periodically
 function cleanupInactiveRooms() {
   const now = new Date();
+  const roomsToDelete = [];
+  
   Object.entries(rooms).forEach(([channelId, room]) => {
     const timeSinceLastActive = now - room.lastActive;
     if (timeSinceLastActive > ROOM_INACTIVE_THRESHOLD) {
+      roomsToDelete.push(channelId);
       // Stop any active timers
       if (room.timer) {
         clearTimeout(room.timer);
       }
-      // Remove the room
-      delete rooms[channelId];
-      // console.log(`Cleaned up inactive room ${channelId}`);
+      // Save scores before cleanup for archival
+      if (room.scores && Object.keys(room.scores).length > 0) {
+        StorageService.saveLeaderboard(channelId, room.scores);
+      }
     }
   });
+  
+  // Delete rooms after iteration
+  roomsToDelete.forEach(channelId => {
+    delete rooms[channelId];
+    console.log(`🧹 Cleaned up inactive room ${channelId} (inactive for ${Math.round(ROOM_INACTIVE_THRESHOLD / 60000)} minutes)`);
+  });
+  
+  if (roomsToDelete.length > 0) {
+    console.log(`🧹 Cleanup complete: removed ${roomsToDelete.length} inactive room(s)`);
+  }
 }
 
 // Start the cleanup interval
@@ -2048,6 +2063,32 @@ io.on("connection", (socket) => {
     }
   });
 
+  // Handle activity_ended event to clean up room immediately
+  socket.on("activity_ended", ({ roomId: requestedRoomId }) => {
+    const targetRoom = requestedRoomId || channelId;
+    const room = rooms[targetRoom];
+    
+    if (room) {
+      console.log(`📴 Activity ended for room ${targetRoom} - cleaning up immediately`);
+      
+      // Stop any active timers
+      if (room.timer) {
+        clearTimeout(room.timer);
+      }
+      
+      // Save scores for archival before deletion
+      if (room.scores && Object.keys(room.scores).length > 0) {
+        StorageService.saveLeaderboard(targetRoom, room.scores);
+      }
+      
+      // Delete the room completely for fresh start
+      delete rooms[targetRoom];
+      
+      // Notify all clients in the room that activity has ended
+      io.to(targetRoom).emit('activity_cleanup', { message: 'Activity ended, room cleaned up' });
+    }
+  });
+
   // when someone disconnects, remove from room
   socket.on("disconnect", () => {
     const room = rooms[channelId];
@@ -2076,12 +2117,18 @@ io.on("connection", (socket) => {
       }
     }
 
-    // If no more players, clean up the room
+    // If no more players, immediately clean up the room completely
     if (Object.keys(room.players).length === 0) {
       if (room.timer) {
         clearTimeout(room.timer);
       }
+      // Save current scores before deleting room (for potential leaderboard archival)
+      if (room.scores && Object.keys(room.scores).length > 0) {
+        StorageService.saveLeaderboard(channelId, room.scores);
+      }
+      // Delete the entire room to ensure fresh start on reconnect
       delete rooms[channelId];
+      console.log(`🧹 Room ${channelId} completely cleaned up - all players disconnected`);
     } else {
       // Otherwise broadcast updated state
       io.to(channelId).emit("room_state", { 
