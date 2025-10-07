@@ -1391,6 +1391,18 @@ app.post('/api/start_question', (req, res) => {
     
     // console.log('🆕 Generated new question for room:', randomQuestion.isCard ? 'Card Question' : 'Trivia Question');
     
+    // Broadcast cleared selections to all clients to prevent old badges from persisting
+    io.to(roomId).emit('gameState', {
+      currentQuestion: randomQuestion,
+      timeLeft: MAX_TIME,
+      showResult: false,
+      gameState: 'playing',
+      questionStartTime: questionStartTime,
+      selections: {}, // Empty selections for new question
+      scores: room.scores || {},
+      playerNames: room.playerNames || {}
+    });
+    
     // Return the question directly to the client
     res.json({ 
       success: true, 
@@ -1551,6 +1563,18 @@ app.post('/start_question', (req, res) => {
     room.generatingQuestion = false; // Clear the lock
     
     // console.log('🆕 [/start_question] Generated new question for room:', randomQuestion.isCard ? 'Card Question' : 'Trivia Question');
+    
+    // Broadcast cleared selections to all clients to prevent old badges from persisting
+    io.to(roomId).emit('gameState', {
+      currentQuestion: randomQuestion,
+      timeLeft: MAX_TIME,
+      showResult: false,
+      gameState: 'playing',
+      questionStartTime: questionStartTime,
+      selections: {}, // Empty selections for new question
+      scores: room.scores || {},
+      playerNames: room.playerNames || {}
+    });
     
     // Return the question directly to the client
     res.json({ 
