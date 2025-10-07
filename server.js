@@ -34,6 +34,7 @@ const SCORING_EXPONENT = 2; // power curve exponent for time-based scoring
 
 const ROOM_CLEANUP_INTERVAL = 1000 * 60 * 5; // 5 minutes (more frequent cleanup)
 const ROOM_INACTIVE_THRESHOLD = 1000 * 60 * 15; // 15 minutes (shorter threshold for fresh starts)
+const GRACE_PERIOD_MAX = 1000 * 10; // 10 seconds max grace period for expired questions
 
 // Daily reset configuration
 const LEADERBOARD_RESET_HOUR = 0; // Reset at midnight UTC
@@ -1010,10 +1011,38 @@ app.get('/api/game-state/:roomId', (req, res) => {
         remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
       }
       
-      // If question has expired (0 seconds left), only clear it if round has been processed
-      // Don't clear question if there are pending selections that need scoring
+      // If question has expired (0 seconds left), check grace period
       if (remainingTime <= 0) {
-        // If round has been completed (scored), we can clear everything
+        const now = Date.now();
+        const timeSinceStart = now - room.questionStartTime;
+        const gracePeriodExpired = timeSinceStart > (MAX_TIME * 1000 + GRACE_PERIOD_MAX);
+        
+        // Auto-clear if grace period has expired (prevents stale revealed states)
+        if (gracePeriodExpired) {
+          // console.log('🧹 [api/game-state] Grace period expired, auto-clearing question. Room:', roomId);
+          room.currentQuestion = null;
+          room.questionStartTime = null;
+          room.roundEnded = false;
+          room.currentSelections = {};
+          room.gameState = 'waiting';
+          
+          // Return clean state
+          res.json({
+            success: true,
+            currentQuestion: null,
+            timeLeft: MAX_TIME,
+            showResult: false,
+            gameState: 'waiting',
+            roundEnded: false,
+            questionStartTime: null,
+            selections: {},
+            scores: room.scores || {},
+            playerNames: room.playerNames || {}
+          });
+          return;
+        }
+        
+        // If round has been completed (scored), clear everything
         if (room.roundEnded) {
           // console.log('🧹 [api/game-state] Clearing completed question from room:', roomId);
           room.currentQuestion = null;
@@ -1038,7 +1067,8 @@ app.get('/api/game-state/:roomId', (req, res) => {
           return;
         } else {
           // Time expired but round not yet processed - show results for badge display
-          // console.log('⏰ [api/game-state] Time expired but keeping question for scoring. Room:', roomId);
+          // Grace period still active - keep question for scoring
+          // console.log('⏰ [api/game-state] Grace period active, keeping question for scoring. Room:', roomId);
           res.json({
             success: true,
             currentQuestion: room.currentQuestion,
@@ -1123,58 +1153,77 @@ app.get('/game-state/:roomId', (req, res) => {
         remainingTime = Math.max(0, MAX_TIME - elapsedSeconds);
       }
       
-      // If question has expired (0 seconds left), only clear it if round has been processed
-      // Don't clear question if there are pending selections that need scoring
+      // If question has expired (0 seconds left), check grace period
       if (remainingTime <= 0) {
-        // If round has been completed (scored), show results for 5 seconds before clearing
+        const now = Date.now();
+        const timeSinceStart = now - room.questionStartTime;
+        const gracePeriodExpired = timeSinceStart > (MAX_TIME * 1000 + GRACE_PERIOD_MAX);
+        
+        // Auto-clear if grace period has expired (prevents stale revealed states)
+        if (gracePeriodExpired) {
+          // console.log('🧹 [game-state] Grace period expired, auto-clearing question. Room:', roomId);
+          room.currentQuestion = null;
+          room.questionStartTime = null;
+          room.roundEnded = false;
+          room.currentSelections = {};
+          room.gameState = 'waiting';
+          room.resultShowStartTime = null;
+          
+          // Return clean state
+          res.json({
+            success: true,
+            currentQuestion: null,
+            timeLeft: MAX_TIME,
+            showResult: false,
+            gameState: 'waiting',
+            roundEnded: false,
+            questionStartTime: null,
+            selections: {},
+            scores: room.scores || {},
+            playerNames: room.playerNames || {}
+          });
+          return;
+        }
+        
+        // If round has been completed (scored), clear everything
         if (room.roundEnded) {
-          // Add grace period after round ends to show results
-          if (!room.resultShowStartTime) {
-            room.resultShowStartTime = Date.now();
-          }
+          // console.log('🧹 [game-state] Clearing completed question from room:', roomId);
+          room.currentQuestion = null;
+          room.questionStartTime = null;
+          room.roundEnded = false;
+          room.currentSelections = {}; 
+          room.gameState = 'waiting';
+          room.resultShowStartTime = null;
           
-          const resultShowDuration = 5000; // 5 seconds to show results
-          const resultElapsed = Date.now() - room.resultShowStartTime;
-          
-          if (resultElapsed >= resultShowDuration) {
-            // Grace period expired but DON'T auto-clear - wait for explicit new question request
-            // This prevents rapid polling from causing question clearing loops
-            console.log('⏰ [game-state] Grace period expired but keeping question stable. Room:', roomId, 'elapsed:', resultElapsed);
-            res.json({
-              success: true,
-              currentQuestion: room.currentQuestion,
-              timeLeft: 0,
-              showResult: true,
-              gameState: 'results', // Keep consistent state to prevent client confusion
-              roundEnded: true,
-              questionStartTime: room.questionStartTime
-            });
-            return;
-          } else {
-            // Still in grace period - keep question visible with results
-            console.log('📊 [game-state] Showing results during grace period. Room:', roomId, 'elapsed:', resultElapsed, 'questionID:', room.currentQuestion?.id);
-            res.json({
-              success: true,
-              currentQuestion: room.currentQuestion,
-              timeLeft: 0,
-              showResult: true,
-              gameState: 'results',
-              roundEnded: true,
-              questionStartTime: room.questionStartTime
-            });
-            return;
-          }
+          // Return clean state for fresh start
+          res.json({
+            success: true,
+            currentQuestion: null,
+            timeLeft: MAX_TIME,
+            showResult: false,
+            gameState: 'waiting',
+            roundEnded: false,
+            questionStartTime: null,
+            selections: {},
+            scores: room.scores || {},
+            playerNames: room.playerNames || {}
+          });
+          return;
         } else {
           // Time expired but round not yet processed - keep question for scoring
-          // console.log('⏰ [game-state] Time expired but keeping question for scoring. Room:', roomId);
+          // Grace period still active
+          // console.log('⏰ [game-state] Grace period active, keeping question for scoring. Room:', roomId);
           res.json({
             success: true,
             currentQuestion: room.currentQuestion,
             timeLeft: 0,
-            showResult: false,
+            showResult: true,
             gameState: 'active',
             roundEnded: false,
-            questionStartTime: room.questionStartTime
+            questionStartTime: room.questionStartTime,
+            selections: room.currentSelections || {},
+            scores: room.scores || {},
+            playerNames: room.playerNames || {}
           });
           return;
         }
