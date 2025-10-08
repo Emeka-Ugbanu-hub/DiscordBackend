@@ -305,13 +305,16 @@ app.post('/api/game-event', (req, res) => {
           
           // If forceNew is true (Restart Quiz button), reset all scores
           if (data.forceNew) {
-            // console.log('🔄 [Socket] Resetting scores for new quiz session');
-            Object.keys(room.players).forEach(playerId => {
-              room.players[playerId].score = 0;
+            console.log('🔄 [/api/game-event] Resetting scores for new quiz session');
+            Object.keys(room.players || {}).forEach(playerId => {
+              if (room.players[playerId]) {
+                room.players[playerId].score = 0;
+              }
             });
             room.scores = {};
             // Clear saved current scores for this room
             StorageService.clearCurrentScores(data.roomId);
+            console.log('✅ [/api/game-event] Scores reset complete:', room.scores);
           }
           
           // Generate new question - clear round ended state since we're starting fresh
@@ -325,6 +328,7 @@ app.post('/api/game-event', (req, res) => {
           room.gameState = 'playing';
           room.roundEnded = false; // Reset round ended flag for new question
           room.currentSelections = {}; // Clear previous selections
+          room.lastSelections = {}; // Clear last selections too
           room.resultShowStartTime = null; // Clear result show timer for new question
           room.generatingQuestion = false; // Clear the lock
           
@@ -1464,13 +1468,16 @@ app.post('/api/start_question', (req, res) => {
     
     // If forceNew is true (Restart Quiz button), reset all scores
     if (forceNew) {
-      // console.log('🔄 [/api/start_question] Resetting scores for new quiz session');
-      Object.keys(room.players).forEach(playerId => {
-        room.players[playerId].score = 0;
+      console.log('🔄 [/api/start_question] Resetting scores for new quiz session');
+      Object.keys(room.players || {}).forEach(playerId => {
+        if (room.players[playerId]) {
+          room.players[playerId].score = 0;
+        }
       });
       room.scores = {};
       // Clear saved current scores for this room
       StorageService.clearCurrentScores(roomId);
+      console.log('✅ [/api/start_question] Scores reset complete:', room.scores);
     }
     
     // Generate new question - clear round ended state since we're starting fresh
@@ -1484,6 +1491,7 @@ app.post('/api/start_question', (req, res) => {
     room.gameState = 'playing';
     room.roundEnded = false; // Reset round ended flag for new question
     room.currentSelections = {}; // Clear previous selections
+    room.lastSelections = {}; // Clear last selections too
     room.resultShowStartTime = null; // Clear result show timer for new question
     room.generatingQuestion = false; // Clear the lock
     
