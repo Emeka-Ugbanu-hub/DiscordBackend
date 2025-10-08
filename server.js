@@ -507,6 +507,14 @@ app.post('/api/game-event', (req, res) => {
           room.lastSelections = clientSelections;
           room.lastCorrectAnswer = correctAnswer;
           
+          console.log(`📊 [/api/game-event end_round] Stored lastSelections:`, {
+            roomId: data.roomId,
+            roundSelections,
+            clientSelections,
+            lastSelections: room.lastSelections,
+            playerNames: room.playerNames
+          });
+          
           // Send reveal data
           const responseData = {
             success: true, 
@@ -1115,6 +1123,12 @@ app.get('/api/game-state/:roomId', (req, res) => {
       
       // CRITICAL: Use lastSelections if round has ended (reveal phase), otherwise currentSelections
       const selectionsToSend = room.roundEnded ? (room.lastSelections || {}) : (room.currentSelections || {});
+      console.log(`📤 [api/game-state] Sending selections for room ${roomId}:`, {
+        roundEnded: room.roundEnded,
+        selectionsToSend,
+        lastSelections: room.lastSelections,
+        currentSelections: room.currentSelections
+      });
       res.json({
         success: true,
         currentQuestion: room.currentQuestion,
