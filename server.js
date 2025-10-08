@@ -1069,6 +1069,8 @@ app.get('/api/game-state/:roomId', (req, res) => {
           // Time expired but round not yet processed - show results for badge display
           // Grace period still active - keep question for scoring
           // console.log('⏰ [api/game-state] Grace period active, keeping question for scoring. Room:', roomId);
+          // CRITICAL: Use lastSelections during reveal phase (after end_round was called)
+          const selectionsToSend = room.roundEnded ? (room.lastSelections || {}) : (room.currentSelections || {});
           res.json({
             success: true,
             currentQuestion: room.currentQuestion,
@@ -1077,7 +1079,7 @@ app.get('/api/game-state/:roomId', (req, res) => {
             gameState: 'active',
             roundEnded: false,
             questionStartTime: room.questionStartTime,
-            selections: room.currentSelections || {},
+            selections: selectionsToSend,
             scores: room.scores || {},
             playerNames: room.playerNames || {}
           });
@@ -1087,6 +1089,8 @@ app.get('/api/game-state/:roomId', (req, res) => {
       
       // console.log('📋 [api/game-state] Returning existing question for room:', roomId, 'timeLeft:', remainingTime);
       
+      // CRITICAL: Use lastSelections if round has ended (reveal phase), otherwise currentSelections
+      const selectionsToSend = room.roundEnded ? (room.lastSelections || {}) : (room.currentSelections || {});
       res.json({
         success: true,
         currentQuestion: room.currentQuestion,
@@ -1095,7 +1099,7 @@ app.get('/api/game-state/:roomId', (req, res) => {
         gameState: room.gameState,
         roundEnded: room.roundEnded,
         questionStartTime: room.questionStartTime,
-        selections: room.currentSelections || {},
+        selections: selectionsToSend,
         scores: room.scores || {},
         playerNames: room.playerNames || {}
       });
@@ -1213,6 +1217,8 @@ app.get('/game-state/:roomId', (req, res) => {
           // Time expired but round not yet processed - keep question for scoring
           // Grace period still active
           // console.log('⏰ [game-state] Grace period active, keeping question for scoring. Room:', roomId);
+          // CRITICAL: Use lastSelections during reveal phase (after end_round was called)
+          const selectionsToSend = room.roundEnded ? (room.lastSelections || {}) : (room.currentSelections || {});
           res.json({
             success: true,
             currentQuestion: room.currentQuestion,
@@ -1221,7 +1227,7 @@ app.get('/game-state/:roomId', (req, res) => {
             gameState: 'active',
             roundEnded: false,
             questionStartTime: room.questionStartTime,
-            selections: room.currentSelections || {},
+            selections: selectionsToSend,
             scores: room.scores || {},
             playerNames: room.playerNames || {}
           });
@@ -1231,6 +1237,8 @@ app.get('/game-state/:roomId', (req, res) => {
       
       console.log('📋 [game-state] Returning existing question for room:', roomId, 'timeLeft:', remainingTime, 'questionID:', room.currentQuestion?.id);
       
+      // CRITICAL: Use lastSelections if round has ended (reveal phase), otherwise currentSelections
+      const selectionsToSend = room.roundEnded ? (room.lastSelections || {}) : (room.currentSelections || {});
       res.json({
         success: true,
         currentQuestion: room.currentQuestion,
@@ -1238,7 +1246,10 @@ app.get('/game-state/:roomId', (req, res) => {
         showResult: room.roundEnded || remainingTime <= 0,
         gameState: room.gameState,
         roundEnded: room.roundEnded,
-        questionStartTime: room.questionStartTime
+        questionStartTime: room.questionStartTime,
+        selections: selectionsToSend,
+        scores: room.scores || {},
+        playerNames: room.playerNames || {}
       });
     } else {
       // console.log('📋 [game-state] No current question for room:', roomId);
