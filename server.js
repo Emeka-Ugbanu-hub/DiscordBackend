@@ -1127,8 +1127,11 @@ app.get('/api/game-state/:roomId', (req, res) => {
       
       // CRITICAL: Use lastSelections if round has ended (reveal phase), otherwise currentSelections
       const selectionsToSend = room.roundEnded ? (room.lastSelections || {}) : (room.currentSelections || {});
+      const showResultValue = room.roundEnded || remainingTime <= 0;
       console.log(`📤 [api/game-state] Sending selections for room ${roomId}:`, {
         roundEnded: room.roundEnded,
+        remainingTime,
+        showResult: showResultValue,
         selectionsToSend,
         lastSelections: room.lastSelections,
         currentSelections: room.currentSelections
@@ -1137,7 +1140,7 @@ app.get('/api/game-state/:roomId', (req, res) => {
         success: true,
         currentQuestion: room.currentQuestion,
         timeLeft: remainingTime,
-        showResult: room.roundEnded || remainingTime <= 0,
+        showResult: showResultValue,
         gameState: room.gameState,
         roundEnded: room.roundEnded,
         questionStartTime: room.questionStartTime,
