@@ -420,14 +420,21 @@ app.post('/api/game-event', (req, res) => {
         break;
         
       case 'end_round':
-        // console.log(`🏁 Ending round for room: ${data.roomId}`);
+        console.log(`🏁 [/api/game-event] END_ROUND received for room: ${data.roomId}`);
         // Handle round completion and reveal all selections
         if (data.roomId && rooms[data.roomId]) {
           const room = rooms[data.roomId];
           
+          console.log(`🏁 [/api/game-event] Room state before end_round:`, {
+            roomId: data.roomId,
+            roundEnded: room.roundEnded,
+            hasCurrentQuestion: !!room.currentQuestion,
+            currentSelectionsCount: Object.keys(room.currentSelections || {}).length
+          });
+          
           // Prevent duplicate round endings
           if (room.roundEnded) {
-            // console.log('⚠️ Round already ended for this room, skipping duplicate request');
+            console.log('⚠️ [/api/game-event] Round already ended, skipping duplicate request');
             res.json({ 
               success: true, 
               action: 'round_complete',
