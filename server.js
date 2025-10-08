@@ -1109,18 +1109,17 @@ app.get('/api/game-state/:roomId', (req, res) => {
           });
           return;
         } else {
-          // Time expired but round not yet processed - show results for badge display
-          // Grace period still active - keep question for scoring
-          // console.log('⏰ [api/game-state] Grace period active, keeping question for scoring. Room:', roomId);
-          // CRITICAL: Use lastSelections during reveal phase (after end_round was called)
+          // Time expired but round not yet processed - DON'T show results yet
+          // Wait for client to call end_round to properly set roundEnded flag
+          // This prevents premature reveal before end_round is called
           const selectionsToSend = room.roundEnded ? (room.lastSelections || {}) : (room.currentSelections || {});
           res.json({
             success: true,
             currentQuestion: room.currentQuestion,
             timeLeft: 0,
-            showResult: true, // Show results when time expires for badge display
+            showResult: room.roundEnded, // CRITICAL: Only show results AFTER end_round is called
             gameState: 'active',
-            roundEnded: false,
+            roundEnded: room.roundEnded,
             questionStartTime: room.questionStartTime,
             selections: selectionsToSend,
             scores: room.scores || {},
@@ -1134,7 +1133,9 @@ app.get('/api/game-state/:roomId', (req, res) => {
       
       // CRITICAL: Use lastSelections if round has ended (reveal phase), otherwise currentSelections
       const selectionsToSend = room.roundEnded ? (room.lastSelections || {}) : (room.currentSelections || {});
-      const showResultValue = room.roundEnded || remainingTime <= 0;
+      // CRITICAL: Only show results when roundEnded is true (after end_round event)
+      // Don't trigger reveal just because time <= 0 (prevents premature reveal)
+      const showResultValue = room.roundEnded;
       console.log(`📤 [api/game-state] Sending selections for room ${roomId}:`, {
         roundEnded: room.roundEnded,
         remainingTime,
@@ -1266,18 +1267,16 @@ app.get('/game-state/:roomId', (req, res) => {
           });
           return;
         } else {
-          // Time expired but round not yet processed - keep question for scoring
-          // Grace period still active
-          // console.log('⏰ [game-state] Grace period active, keeping question for scoring. Room:', roomId);
-          // CRITICAL: Use lastSelections during reveal phase (after end_round was called)
+          // Time expired but round not yet processed - DON'T show results yet
+          // Wait for client to call end_round
           const selectionsToSend = room.roundEnded ? (room.lastSelections || {}) : (room.currentSelections || {});
           res.json({
             success: true,
             currentQuestion: room.currentQuestion,
             timeLeft: 0,
-            showResult: true,
+            showResult: room.roundEnded, // CRITICAL: Only after end_round
             gameState: 'active',
-            roundEnded: false,
+            roundEnded: room.roundEnded,
             questionStartTime: room.questionStartTime,
             selections: selectionsToSend,
             scores: room.scores || {},
@@ -1295,7 +1294,7 @@ app.get('/game-state/:roomId', (req, res) => {
         success: true,
         currentQuestion: room.currentQuestion,
         timeLeft: remainingTime,
-        showResult: room.roundEnded || remainingTime <= 0,
+        showResult: room.roundEnded, // CRITICAL: Only show results after end_round
         gameState: room.gameState,
         roundEnded: room.roundEnded,
         questionStartTime: room.questionStartTime,
