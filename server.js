@@ -386,6 +386,18 @@ app.post('/api/game-event', (req, res) => {
           
           room.currentSelections[data.playerId] = selection;
           
+          // CRITICAL: If round has ended (reveal phase), also update lastSelections
+          // This ensures selections made during grace period appear in reveal
+          if (room.roundEnded && room.lastSelections) {
+            // Convert to client format and update lastSelections
+            if (data.optionIndex !== undefined) {
+              room.lastSelections[data.playerId] = data.optionIndex;
+            } else if (data.isCorrect !== undefined) {
+              room.lastSelections[data.playerId] = data.isCorrect ? 'correct' : 'incorrect';
+            }
+            console.log(`🔄 [select_option] Updated lastSelections during reveal for player ${data.playerId}`);
+          }
+          
           // Store player name for display purposes
           if (data.playerName) {
             room.playerNames[data.playerId] = data.playerName;
@@ -838,6 +850,18 @@ app.post('/game-event', (req, res) => {
           }
           
           room.currentSelections[data.playerId] = selection;
+          
+          // CRITICAL: If round has ended (reveal phase), also update lastSelections
+          // This ensures selections made during grace period appear in reveal
+          if (room.roundEnded && room.lastSelections) {
+            // Convert to client format and update lastSelections
+            if (data.optionIndex !== undefined) {
+              room.lastSelections[data.playerId] = data.optionIndex;
+            } else if (data.isCorrect !== undefined) {
+              room.lastSelections[data.playerId] = data.isCorrect ? 'correct' : 'incorrect';
+            }
+            console.log(`🔄 [/game-event select_option] Updated lastSelections during reveal for player ${data.playerId}`);
+          }
           
           // Store player name for display purposes
           if (data.playerName) {
