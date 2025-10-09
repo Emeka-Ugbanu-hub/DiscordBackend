@@ -329,6 +329,7 @@ app.post('/api/game-event', (req, res) => {
           room.roundEnded = false; // Reset round ended flag for new question
           room.currentSelections = {}; // Clear previous selections
           room.lastSelections = {}; // Clear last selections too
+          room.lastCorrectAnswer = null; // Clear last correct answer
           room.resultShowStartTime = null; // Clear result show timer for new question
           room.generatingQuestion = false; // Clear the lock
           
@@ -561,12 +562,11 @@ app.post('/api/game-event', (req, res) => {
   }
 });
 
-// Helper function to calculate time-based points (matching client-side logic)
+
 function calculatePointsFromTime(timeTaken) {
-  // console.log(`🔍 calculatePointsFromTime called with: timeTaken=${timeTaken}, type=${typeof timeTaken}`);
   
   if (!timeTaken || timeTaken <= 0) {
-    // console.log(`🔍 Returning 0 because timeTaken is invalid: ${timeTaken}`);
+ 
     return 0;
   }
   
@@ -816,6 +816,8 @@ app.post('/game-event', (req, res) => {
           room.gameState = 'playing';
           room.roundEnded = false;
           room.currentSelections = {}; // Clear previous selections
+          room.lastSelections = {}; // Clear last selections too
+          room.lastCorrectAnswer = null; // Clear last correct answer
           room.resultShowStartTime = null; // Clear result show timer for new question
           room.generatingQuestion = false; // Clear the lock
           
@@ -1494,6 +1496,7 @@ app.post('/api/start_question', (req, res) => {
     room.roundEnded = false; // Reset round ended flag for new question
     room.currentSelections = {}; // Clear previous selections
     room.lastSelections = {}; // Clear last selections too
+    room.lastCorrectAnswer = null; // Clear last correct answer
     room.resultShowStartTime = null; // Clear result show timer for new question
     room.generatingQuestion = false; // Clear the lock
     
@@ -1667,6 +1670,8 @@ app.post('/start_question', (req, res) => {
     room.gameState = 'playing';
     room.roundEnded = false; // Reset round ended flag for new question
     room.currentSelections = {}; // Clear previous selections
+    room.lastSelections = {}; // Clear last selections too
+    room.lastCorrectAnswer = null; // Clear last correct answer
     room.resultShowStartTime = null; // Clear result show timer for new question
     room.generatingQuestion = false; // Clear the lock
     

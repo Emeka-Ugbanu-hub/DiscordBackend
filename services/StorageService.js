@@ -103,8 +103,7 @@ class StorageService {
       questionsAnswered: 0,
       uniquePlayers: new Set(),
       activeChannels: new Set()
-    };
-    
+    };    
     // Clear all current scores as part of daily reset
     this.currentScores.clear();
   }
