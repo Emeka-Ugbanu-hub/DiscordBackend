@@ -429,7 +429,8 @@ app.post('/api/game-event', (req, res) => {
             roomId: data.roomId,
             roundEnded: room.roundEnded,
             hasCurrentQuestion: !!room.currentQuestion,
-            currentSelectionsCount: Object.keys(room.currentSelections || {}).length
+            currentSelectionsCount: Object.keys(room.currentSelections || {}).length,
+            currentSelections: room.currentSelections || {}
           });
           
           // Prevent duplicate round endings
@@ -520,7 +521,9 @@ app.post('/api/game-event', (req, res) => {
           
           console.log(`📊 [/api/game-event end_round] Stored lastSelections:`, {
             roomId: data.roomId,
-            roundSelections,
+            roundSelectionsKeys: Object.keys(roundSelections),
+            roundSelections: JSON.stringify(roundSelections),
+            clientSelectionsKeys: Object.keys(clientSelections),
             clientSelections,
             lastSelections: room.lastSelections,
             playerNames: room.playerNames
