@@ -1063,12 +1063,18 @@ app.get('/api/game-state/:roomId', (req, res) => {
         const timeSinceStart = now - room.questionStartTime;
         const gracePeriodExpired = timeSinceStart > (MAX_TIME * 1000 + GRACE_PERIOD_MAX);
         
-        // Auto-clear if grace period has expired (prevents stale revealed states)
+        // DISABLED: Don't auto-clear - let the "Next Question" button handle clearing
+        // This prevents badges from disappearing during reveal phase
+        // The reveal phase should persist until user clicks "Next Question"
+        /*
         if (gracePeriodExpired) {
-          // console.log('🧹 [api/game-state] Grace period expired, auto-clearing question. Room:', roomId);
+          console.log('🧹 [api/game-state] Grace period expired, but keeping roundEnded=true for persistent reveal. Room:', roomId);
+          // DON'T reset roundEnded - keep reveal phase active until Next Question clicked
+          // room.roundEnded stays true so badges persist
+          // Just clear the question and selections
           room.currentQuestion = null;
           room.questionStartTime = null;
-          room.roundEnded = false;
+          // room.roundEnded = false;  ← REMOVED: Don't reset reveal phase
           room.currentSelections = {};
           room.gameState = 'waiting';
           
@@ -1087,6 +1093,10 @@ app.get('/api/game-state/:roomId', (req, res) => {
           });
           return;
         }
+        */
+        
+        // Instead of auto-clearing, just keep showing the reveal
+        // Return question with showResult=true based on roundEnded flag
         
         // If round has been completed (scored), clear everything
         if (room.roundEnded) {
@@ -1219,7 +1229,9 @@ app.get('/game-state/:roomId', (req, res) => {
         const timeSinceStart = now - room.questionStartTime;
         const gracePeriodExpired = timeSinceStart > (MAX_TIME * 1000 + GRACE_PERIOD_MAX);
         
-        // Auto-clear if grace period has expired (prevents stale revealed states)
+        // DISABLED: Don't auto-clear - let the "Next Question" button handle clearing
+        // This prevents badges from disappearing during reveal phase
+        /*
         if (gracePeriodExpired) {
           // console.log('🧹 [game-state] Grace period expired, auto-clearing question. Room:', roomId);
           room.currentQuestion = null;
@@ -1244,49 +1256,27 @@ app.get('/game-state/:roomId', (req, res) => {
           });
           return;
         }
+        */
         
-        // If round has been completed (scored), clear everything
-        if (room.roundEnded) {
-          // console.log('🧹 [game-state] Clearing completed question from room:', roomId);
-          room.currentQuestion = null;
-          room.questionStartTime = null;
-          room.roundEnded = false;
-          room.currentSelections = {}; 
-          room.gameState = 'waiting';
-          room.resultShowStartTime = null;
-          
-          // Return clean state for fresh start
-          res.json({
-            success: true,
-            currentQuestion: null,
-            timeLeft: MAX_TIME,
-            showResult: false,
-            gameState: 'waiting',
-            roundEnded: false,
-            questionStartTime: null,
-            selections: {},
-            scores: room.scores || {},
-            playerNames: room.playerNames || {}
-          });
-          return;
-        } else {
-          // Time expired but round not yet processed - DON'T show results yet
-          // Wait for client to call end_round
-          const selectionsToSend = room.roundEnded ? (room.lastSelections || {}) : (room.currentSelections || {});
-          res.json({
-            success: true,
-            currentQuestion: room.currentQuestion,
-            timeLeft: 0,
-            showResult: room.roundEnded, // CRITICAL: Only after end_round
-            gameState: 'active',
-            roundEnded: room.roundEnded,
-            questionStartTime: room.questionStartTime,
-            selections: selectionsToSend,
-            scores: room.scores || {},
-            playerNames: room.playerNames || {}
-          });
-          return;
-        }
+        // DISABLED: Auto-clear logic commented out to preserve reveal phase
+        // Reveal badges should persist until user clicks "Next Question"
+        // Just keep showing the reveal with roundEnded flag
+        
+        // Use roundEnded flag to determine what to send
+        const selectionsToSend = room.roundEnded ? (room.lastSelections || {}) : (room.currentSelections || {});
+        res.json({
+          success: true,
+          currentQuestion: room.currentQuestion,
+          timeLeft: 0,
+          showResult: room.roundEnded, // CRITICAL: Show results when round ended
+          gameState: 'active',
+          roundEnded: room.roundEnded,
+          questionStartTime: room.questionStartTime,
+          selections: selectionsToSend,
+          scores: room.scores || {},
+          playerNames: room.playerNames || {}
+        });
+        return;
       }
       
       console.log('📋 [game-state] Returning existing question for room:', roomId, 'timeLeft:', remainingTime, 'questionID:', room.currentQuestion?.id);
