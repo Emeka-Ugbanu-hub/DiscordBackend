@@ -645,7 +645,7 @@ function getRandomQuestion() {
       isCard: true,
       cardName: name,
       cardUrl: url,
-      id: `card_${idx}`
+      id: `card_${idx}_${Date.now()}` // Include timestamp for uniqueness
     };
   }
 
@@ -653,12 +653,13 @@ function getRandomQuestion() {
   const randomIndex = Math.floor(Math.random() * questions.length);
   const question = questions[randomIndex];
   
-  // Return question in the same format as the JSON file with consistent string ID
+  // Return question in the same format as the JSON file with UNIQUE string ID
+  // Use timestamp to ensure each question instance has a unique ID
   return {
     question: question.question,
     options: question.options,
     answer: question.answer,
-    id: `trivia_${randomIndex}`,
+    id: `trivia_${randomIndex}_${Date.now()}`, // Include timestamp for uniqueness
     isCard: false
   };
 }
