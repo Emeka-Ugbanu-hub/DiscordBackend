@@ -20,7 +20,7 @@
         "answer": "B"
     },
     {
-        "question": "The Azap, a unit traiable only by the Ottomans, was introduced to the game in which year?",
+        "question": "The Azap, a unit trainable only by the Ottomans, was introduced to the game in which year?",
         "options": [
             "A) 2021",
             "B) 2022",
@@ -317,7 +317,7 @@
             "C) 2.5",
             "D) 3"
         ],
-        "answer": "D"
+        "answer": "A"
     },
     {
         "question": "What is the Rate of Fire for a Hussar in Trample Attack mode?",
@@ -767,7 +767,7 @@
             "C) Russia",
             "D) Both A and C"
         ],
-        "answer": "B"
+        "answer": "D"
     },
     {
         "question": "Act 1 of the Blood, Ice, and Steel campaign is lead by which Hero?",
@@ -955,7 +955,7 @@
             "A) Ozarks",
             "B) Central Plains",
             "C) Sonora",
-            "D) Coralina"
+            "D) Carolina"
         ],
         "answer": "A"
     },
@@ -1260,10 +1260,10 @@
         "answer": "D"
     },
     {
-        "question": "The House of Hanover technology Victorian Era has a 10,000 food & coin cost which is reduced by what?",
+        "question": "The House of Hanover technology Victorian Era has a 10,000 food & coin cost reduced by?",
         "options": [
-            "A) The build and kill XP earned by the player during the game",
-            "B) The number of units and buildings killed during the game",
+            "A) The build and kill XP earned by the player",
+            "B) The number of units and buildings killed",
             "C) The amount of resources stockpiled by a player",
             "D) The duration of the current game in seconds"
         ],
@@ -1870,7 +1870,7 @@
         "answer": "A"
     },
     {
-        "question": "Which type of resource crates are delivered when researching the Zapotec Cloud People technology from the Trading Post?",
+        "question": "Which resource crates are delivered when the Zapotec Cloud People technology is researched from the Trading Post?",
         "options": [
             "A) Food Crates",
             "B) Wood Crates",
@@ -2220,12 +2220,12 @@
         "answer": "B"
     },
     {
-        "question": "TEMPLATE",
+        "question": "Which artillery unit can the Chinese produce from their Castle?",
         "options": [
-            "A) a",
-            "B) b",
-            "C) c",
-            "D) d"
+            "A) Flying Crow",
+            "B) Hand Mortar",
+            "C) Flaming Arrow",
+            "D) Siege Elephant"
         ],
         "answer": "B"
     },
@@ -2354,7 +2354,7 @@
         "options": [
             "A) A number of State Milita",
             "B) A number of Minutemen",
-            "C) A Range and LoS increase to certain infantry",
+            "C) Range and LoS increase to certain infantry",
             "D) A number of Sharpshooters"
         ],
         "answer": "C"
@@ -2394,7 +2394,7 @@
         "options": [
             "A) I can pass peacefully now... and proud...",
             "B) Every moment I live... is agony.",
-            "C) Horatio, I am dead; Thou livest; report me and my cause aright To the unsatisfied",
+            "C) Horatio, I am dead; Thou livest; report my cause to the unsatisfied",
             "D) If you strike me down, I shall become more powerful than you can possibly imagine..."
         ],
         "answer": "A"
@@ -2550,7 +2550,7 @@
         "answer": "C"
     },
     {
-        "question": "On the map Dunes - The Eye, introduced in the Knights of the Mediterranean, players are disabled from constructing which building?",
+        "question": "On the map Dunes - The Eye, players are disabled from constructing which building?",
         "options": [
             "A) Additional Town Centers",
             "B) Outposts",
@@ -2578,5 +2578,425 @@
             "D) Cavalry"
         ],
         "answer": "C"
+    },
+    {
+        "question": "The Nizam Fusilier gains what type of damage resistance in Stagger Mode?",
+        "options": [
+            "A) Ranged Resistance",
+            "B) Mele Resistance",
+            "C) Siege Resistance",
+            "D) Both A and B"
+        ],
+        "answer": "C"
+    },
+    {
+        "question": "In Hand Attack, the Swiss Pikeman deals 22 base damage with what attack bonus?",
+        "options": [
+            "A) 2.0x Cavalry",
+            "B) 5.0x Cavalry",
+            "C) 5.5x Cavalry",
+            "D) 7.0x Cavalry"
+        ],
+        "answer": "B"
+    },
+    {
+        "question": "The Incan Home City card Road Building provides which of the following effects?",
+        "options": [
+            "A) All land military units get +10% speed",
+            "B) Infantry, sock infantry and cavalry train time -45%",
+            "C) Ships 1 Chasqui, land military units get +5% speed",
+            "D) Ships 3 Tambo Travois"
+        ],
+        "answer": "A"
+    },
+    {
+        "question": "The Mexican civilization starts with what resource distribution?",
+        "options": [
+            "A) 300f, 200w, and a Cow",
+            "B) 500f, 100w, and a Cow",
+            "C) 200f, 100w, 200c, and a Cow",
+            "D) 400f, 200w, 100c, and a Cow"
+        ],
+        "answer": "D"
+    },
+    {
+        "question": "Which of the following civilizations start with a scout unit?",
+        "options": [
+            "A) Dutch",
+            "B) Russia",
+            "C) France",
+            "D) Both A and C"
+        ],
+        "answer": "D"
+    },
+    {
+        "question": "The Beast of Gevaudan is a formidable opponent with which of the following tags?",
+        "options": [
+            "A) Guardian",
+            "B) Hero",
+            "C) Mercenary",
+            "D) Both A and B"
+        ],
+        "answer": "D"
+    },
+    {
+        "question": "Which of the following civilizations can NOT research the Market technology Steel Traps?",
+        "options": [
+            "A) Russia",
+            "B) France",
+            "C) India",
+            "D) Ottoman"
+        ],
+        "answer": "C"
+    },
+    {
+        "question": "Which of the following civilizations can NOT research the Market technology Amalgamation?",
+        "options": [
+            "A) Italy",
+            "B) British",
+            "C) Sweden",
+            "D) Japan"
+        ],
+        "answer": "D"
+    },
+    {
+        "question": "China has access to which of the following Market technologies?",
+        "options": [
+            "A) Hunting Eagles",
+            "B) Hanami Parties",
+            "C) Fur Dressing",
+            "D) Blanket Filters"
+        ],
+        "answer": "A"
+    },
+    {
+        "question": "Ethiopia has access to which of the following Market technologies?",
+        "options": [
+            "A) Regenerative Forestry",
+            "B) Water Wheel",
+            "C) Civil Servants",
+            "D) Eastern Medicine"
+        ],
+        "answer": "D"
+    },
+    {
+        "question": "The Native Technology Cree Textile Craftsmanship reduces the cost of buildings by what amount?",
+        "options": [
+            "A) -15%",
+            "B) -20%",
+            "C) -25%",
+            "D) -35%"
+        ],
+        "answer": "C"
+    },
+    {
+        "question": "Placer Mines is NOT obtainable by which of the following civilizations?",
+        "options": [
+            "A) Aztecs",
+            "B) Incans",
+            "C) Lakota",
+            "D) Sweden"
+        ],
+        "answer": "C"
+    },
+    {
+        "question": "The Lakota have the ability to advance to Age 2 using the Elder, which grants what upon aging up?",
+        "options": [
+            "A) Ships 500 food",
+            "B) Ships 400 wood",
+            "C) Ships 1 Tokala Soldier",
+            "D) Ships 6 Bison"
+        ],
+        "answer": "A"
+    },
+    {
+        "question": "By selecting the Chief the Incans advance to Age 2, which grants what upon aging up in addition to a Chasqui?",
+        "options": [
+            "A) Ships 3 Chimu Runners",
+            "B) Ships 3 Priestesses",
+            "C) Grants Lumber Ceremony",
+            "D) Ships 2 Builder Travois"
+        ],
+        "answer": "D"
+    },
+    {
+        "question": "What is the cost of the Stagecoach technology available at the Trading Post?",
+        "options": [
+            "A) 100f, 150w",
+            "B) 200f, 200w",
+            "C) 250f, 250w",
+            "D) 300f, 300w"
+        ],
+        "answer": "B"
+    },
+    {
+        "question": "What is the cost of the Iron Horse technology available at the Trading Post?",
+        "options": [
+            "A) 250w, 250c",
+            "B) 300w, 400c",
+            "C) 400w, 350c",
+            "D) 450w, 450c"
+        ],
+        "answer": "B"
+    },
+    {
+        "question": "What is the cost of the Artificial Fertilizer technology available at the Mill?",
+        "options": [
+            "A) 150w, 150c",
+            "B) 275w, 225c",
+            "C) 335w, 335c",
+            "D) 350w, 150c"
+        ],
+        "answer": "C"
+    },
+    {
+        "question": "What is the cost of the Irrigation Channels technology available at the Rice Paddy?",
+        "options": [
+            "A) 150w, 150c",
+            "B) 200f, 200w",
+            "C) 400f, 400w",
+            "D) 1000f, 1000w"
+        ],
+        "answer": "A"
+    },
+    {
+        "question": "What is the cost of the Collective Economy technology available at the Rice Paddy?",
+        "options": [
+            "A) 150w, 150c",
+            "B) 400f, 400w",
+            "C) 1000f, 1000w",
+            "D) 1000w, 1000c"
+        ],
+        "answer": "C"
+    },
+    {
+        "question": "What is the construction base cost of the Field?",
+        "options": [
+            "A) 25w",
+            "B) 50w",
+            "C) 100w",
+            "D) 150w"
+        ],
+        "answer": "B"
+    },
+    {
+        "question": "What is the construction base cost of the Arsenal?",
+        "options": [
+            "A) 200w",
+            "B) 250w",
+            "C) 300w",
+            "D) 450w"
+        ],
+        "answer": "B"
+    },
+    {
+        "question": "What is the cost of the Counter Infantry Rifling technology available at the Arsenal?",
+        "options": [
+            "A) 100w, 100c",
+            "B) 150f, 150w",
+            "C) 200w, 200c",
+            "D) 300f, 250w"
+        ],
+        "answer": "C"
+    },
+    {
+        "question": "What is the cost of the Infantry Breastplate technology available at the Arsenal?",
+        "options": [
+            "A) 100w, 100c",
+            "B) 100f, 150w",
+            "C) 100w, 200c",
+            "D) 100f, 250w"
+        ],
+        "answer": "A"
+    },
+    {
+        "question": "What is the cost of the Military Drummers technology available at the Advanced Arsenal?",
+        "options": [
+            "A) 100w, 100c",
+            "B) 100w, 150c",
+            "C) 150w, 150c",
+            "D) 150w, 250c"
+        ],
+        "answer": "C"
+    },
+    {
+        "question": "What is the cost of the Fortified Cities technology available at the African Town Center?",
+        "options": [
+            "A) 1000 coin",
+            "B) 2000 coin",
+            "C) 2000 influence",
+            "D) 3000 influence"
+        ],
+        "answer": "D"
+    },
+    {
+        "question": "What is the cost of the Exalted Natives technology available at the Asian Town Center?",
+        "options": [
+            "A) 1000f, 1000w",
+            "B) 1500f, 1500w",
+            "C) 2000f, 2000w",
+            "D) 2000f, 1500c"
+        ],
+        "answer": "B"
+    },
+    {
+        "question": "Which of the following civilization does NOT have access to the Immigrants technology?",
+        "options": [
+            "A) Sweden",
+            "B) Aztecs",
+            "C) Indian",
+            "D) Lakota"
+        ],
+        "answer": "D"
+    },
+    {
+        "question": "Monumental Architecture is available to the Inca, and which Revolution?",
+        "options": [
+            "A) Chile",
+            "B) Brazil",
+            "C) Peru",
+            "D) Gran Colombia"
+        ],
+        "answer": "C"
+    },
+    {
+        "question": "The Dutch Home City Card Stadhouder reduces Town Center wood cost by how much?",
+        "options": [
+            "A) -25%",
+            "B) -35%",
+            "C) -45%",
+            "D) -50%"
+        ],
+        "answer": "D"
+    },
+    {
+        "question": "The Haudenosaunee Home City Card Great House reduces Town Center wood cost by how much?",
+        "options": [
+            "A) -25%",
+            "B) -35%",
+            "C) -45%",
+            "D) -50%"
+        ],
+        "answer": "A"
+    },
+    {
+        "question": "The Indian Home City Card Mughal Architecture reduces Town Center wood cost by how much?",
+        "options": [
+            "A) -20%",
+            "B) -25%",
+            "C) -30%",
+            "D) -35%"
+        ],
+        "answer": "A"
+    },
+    {
+        "question": "The Lakota Home City Card Winter Counts increases unit train bounty by how much?",
+        "options": [
+            "A) +20%",
+            "B) +40%",
+            "C) +60%",
+            "D) +100%"
+        ],
+        "answer": "B"
+    },
+    {
+        "question": "The Maltese Home City Card Vittoriosa is available in which Age?",
+        "options": [
+            "A) Age 1",
+            "B) Age 2",
+            "C) Age 3",
+            "D) Age 4"
+        ],
+        "answer": "C"
+    },
+    {
+        "question": "The Russian Home City Card Sevastopol reduces the built time of defensive buildings by how much?",
+        "options": [
+            "A) -40%",
+            "B) -50%",
+            "C) -60%",
+            "D) -65%"
+        ],
+        "answer": "B"
+    },
+    {
+        "question": "What is the cost to send the United States Home City Card TEAM Alaska Purchase?",
+        "options": [
+            "A) 1,000 coin",
+            "B) 1,500 wood",
+            "C) 300 food",
+            "D) 1,500 food"
+        ],
+        "answer": "A"
+    },
+    {
+        "question": "Which of the following units is unable to collect teasures?",
+        "options": [
+            "A) Klamath Rifleman",
+            "B) Explorer",
+            "C) Native Scout",
+            "D) Settler"
+        ],
+        "answer": "C"
+    },
+    {
+        "question": "The map Nile Valley allows players to recruit which 2 Outlaws?",
+        "options": [
+            "A) Corsair Marksman & Desert Warrior",
+            "B) Desert Warrior & Desert Archer",
+            "C) Desert Archer & Desert Raider",
+            "D) Crabat & Corsair Marksman"
+        ],
+        "answer": "A"
+    },
+    {
+        "question": "The map Highlands allows players to recruit which 2 Outlaws?",
+        "options": [
+            "A) Desert Archer & Desert Warrior",
+            "B) Desert Warrior & Desert Archer",
+            "C) Desert Archer & Desert Raider",
+            "D) Desert Warrior & Corsair Marksman"
+        ],
+        "answer": "A"
+    },
+    {
+        "question": "The map Congo Basin allows players to ally with which 2 Natives?",
+        "options": [
+            "A) Sudanese & Somalis",
+            "B) Jesuit & Yoruba",
+            "C) Berbers & Tengri",
+            "D) Akan & Sufi"
+        ],
+        "answer": "B"
+    },
+    {
+        "question": "On which of the following maps could you find both the Shaolin & Tengri native settlements?",
+        "options": [
+            "A) Yamal",
+            "B) Yellow River",
+            "C) Manchuria",
+            "D) Central Plain"
+        ],
+        "answer": "C"
+    },
+    {
+        "question": "On which of the following maps could you find both the Seminoles & Cherokee native settlements?",
+        "options": [
+            "A) Baja California",
+            "B) Bayou",
+            "C) Cascade Range",
+            "D) Mexico"
+        ],
+        "answer": "B"
+    },
+    {
+        "question": "Which of the following natural resources has the least food capacity?",
+        "options": [
+            "A) Serow",
+            "B) Giant Salamander",
+            "C) Catfish",
+            "D) Squid"
+        ],
+        "answer": "A"
     }
 ]
