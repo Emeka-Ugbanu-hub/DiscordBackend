@@ -26,7 +26,7 @@ app.use(cors({
 const PORT = process.env.PORT || 3001;
 const CLIENT_ID = process.env.VITE_DISCORD_CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
-const MAX_TIME = 15;
+const MAX_TIME = 20;
 
 // Scoring configuration (matching client-side)
 const MAX_POINTS = 150; // points for an instant (maximum)
