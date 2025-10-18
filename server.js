@@ -553,6 +553,40 @@ app.post('/api/game-event', (req, res) => {
           return;
         }
         break;
+      
+      case 'reset_scores':
+        // console.log(`🔄 [/api/game-event] Resetting scores for room: ${data.roomId}`);
+        
+        if (data.roomId && rooms[data.roomId]) {
+          const room = rooms[data.roomId];
+          
+          // Reset all scores to 0
+          room.scores = {};
+          Object.keys(room.players || {}).forEach(playerId => {
+            if (room.players[playerId]) {
+              room.players[playerId].score = 0;
+            }
+          });
+          
+          // Clear saved current scores for this room
+          if (StorageService && typeof StorageService.clearCurrentScores === 'function') {
+            StorageService.clearCurrentScores(data.roomId);
+          }
+          
+          console.log('✅ [/api/game-event] Scores reset for room:', data.roomId);
+          
+          // Broadcast score reset to all clients in the room
+          if (io) {
+            io.to(data.roomId).emit('scores_reset', {
+              scores: {},
+              timestamp: new Date().toISOString()
+            });
+          }
+          
+          res.json({ success: true, scores: {} });
+          return;
+        }
+        break;
     }
     
     res.json({ success: true });
@@ -1015,6 +1049,40 @@ app.post('/game-event', (req, res) => {
           // Mark round as ended but don't clear question yet - let next question request handle it
           room.roundEnded = true;
           // console.log('🔄 [/game-event] Round marked as completed, ready for next question');
+          return;
+        }
+        break;
+      
+      case 'reset_scores':
+        // console.log(`🔄 [/game-event] Resetting scores for room: ${data.roomId}`);
+        
+        if (data.roomId && rooms[data.roomId]) {
+          const room = rooms[data.roomId];
+          
+          // Reset all scores to 0
+          room.scores = {};
+          Object.keys(room.players || {}).forEach(playerId => {
+            if (room.players[playerId]) {
+              room.players[playerId].score = 0;
+            }
+          });
+          
+          // Clear saved current scores for this room
+          if (StorageService && typeof StorageService.clearCurrentScores === 'function') {
+            StorageService.clearCurrentScores(data.roomId);
+          }
+          
+          console.log('✅ [/game-event] Scores reset for room:', data.roomId);
+          
+          // Broadcast score reset to all clients in the room
+          if (io) {
+            io.to(data.roomId).emit('scores_reset', {
+              scores: {},
+              timestamp: new Date().toISOString()
+            });
+          }
+          
+          res.json({ success: true, scores: {} });
           return;
         }
         break;
